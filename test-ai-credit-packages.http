@@ -1,0 +1,81 @@
+### Test AI Credit Package API
+
+# Available Status Values: ACTIVE, INACTIVE
+
+# Get All AI Credit Packages (Public - No Auth Required)
+GET http://localhost:5000/api/v1/ai-credit-packages
+
+###
+
+# Get AI Credit Package by ID (Public - No Auth Required)
+GET http://localhost:5000/api/v1/ai-credit-packages/PACKAGE_ID_HERE
+
+# Create AI Credit Package (Admin Only)
+POST http://localhost:5000/api/v1/ai-credit-packages
+Authorization: Bearer YOUR_ADMIN_ACCESS_TOKEN
+Content-Type: application/json
+
+{
+  "name": "Starter Package",
+  "credits": 50,
+  "price": 9.99,
+  "status": "ACTIVE"
+}
+
+###
+
+# Create Another Package
+POST http://localhost:5000/api/v1/ai-credit-packages
+Authorization: Bearer YOUR_ADMIN_ACCESS_TOKEN
+Content-Type: application/json
+
+{
+  "name": "Pro Package",
+  "credits": 200,
+  "price": 29.99,
+  "status": "ACTIVE"
+}
+
+###
+
+# Update AI Credit Package (Admin Only)
+PATCH http://localhost:5000/api/v1/ai-credit-packages/PACKAGE_ID_HERE
+Authorization: Bearer YOUR_ADMIN_ACCESS_TOKEN
+Content-Type: application/json
+
+{
+  "price": 24.99,
+  "status": "ACTIVE"
+}
+
+###
+
+# Update Package Status
+PATCH http://localhost:5000/api/v1/ai-credit-packages/PACKAGE_ID_HERE
+Authorization: Bearer YOUR_ADMIN_ACCESS_TOKEN
+Content-Type: application/json
+
+{
+  "status": "INACTIVE"
+}
+
+###
+
+# Update Package Credits and Price
+PATCH http://localhost:5000/api/v1/ai-credit-packages/PACKAGE_ID_HERE
+Authorization: Bearer YOUR_ADMIN_ACCESS_TOKEN
+Content-Type: application/json
+
+{
+  "credits": 150,
+  "price": 19.99
+}
+
+###
+
+# Delete AI Credit Package (Admin Only) - PERMANENT DELETE
+DELETE http://localhost:5000/api/v1/ai-credit-packages/PACKAGE_ID_HERE
+Authorization: Bearer YOUR_ADMIN_ACCESS_TOKEN
+
+# ⚠️ WARNING: This action cannot be undone!
+# The package will be permanently removed from the database.

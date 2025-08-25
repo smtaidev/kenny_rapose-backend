@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String @id @default(uuid())
+  travelerNumber String @unique @default(uuid())
+  firstName String
+  lastName  String
+  email     String @unique
+  password  String
+  gender    Gender?
+  dateOfBirth DateTime?
+  phone     String?
+  address   String?
+  city      String?
+  state     String?
+  zip       String?
+  country   String?
+
+  isEmailVerified Boolean @default(false)
+  role            UserRole @default(USER)
+  isActive        Boolean @default(true)
+  aiCredits       Int     @default(6)
+
+  
+  // OTP for password reset and verification
+  otp          String?
+  otpExpiresAt DateTime?
+  
+  // Refresh token for authentication
+  refreshToken String?
+  
+  // Password reset fields
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
+  lastLoginAt         DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  NON_BINARY
+}
+
+model AiCreditPackage {
+  id        String @id @default(uuid())
+  name      String
+  credits   Int
+  price     Float
+  status    AIPackageStatus @default(ACTIVE)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("ai_credit_packages")
+}
+
+enum AIPackageStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model TourPackage {
+  id            String @id @default(uuid())
+  packageName   String
+  about         String
+  star          Float  // Rating (e.g., 4.5)
+  packagePrice  Float  // Total package price
+  ageRangeFrom  Int    // Minimum age
+  ageRangeTo    Int    // Maximum age
+  tourDuration  Int    // Duration in days
+  whatIncluded  String[] // Array of included items
+  whatNotIncluded String[] // Array of excluded items
+  additionalInfo String[] // Array of additional information
+  cancellationPolicy String[] // Array of cancellation policies
+  help          String
+  breezeCredit  Int    // Breeze credit value
+  
+  // Legacy fields (keeping for backward compatibility)
+  totalMembers  Int?
+  pricePerPerson Float?
+  startDay      DateTime?
+  endDay        DateTime?
+  citiesVisited String[] // Array of cities
+  tourType      String?
+  activities    String[] // Array of activities
+  dailyActivity Json?    // Daily activity object with day1, day2, etc.
+  highlights    String?
+  description  String?
+  photos       String[] // Array of photo URLs
+  status       TourPackageStatus @default(ACTIVE)
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime? // Soft delete
+
+  @@map("tour_packages")
+}
+
+enum TourPackageStatus {
+  ACTIVE
+  INACTIVE
+}
