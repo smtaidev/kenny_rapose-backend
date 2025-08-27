@@ -6,7 +6,7 @@ let server: Server;
 
 const main = async () => {
   try {
-    const port = config.port || 1009;
+    const port = config.port || 1011;
     server = app.listen(port, () => {
       console.log(`Kenny Rappose Server is running on port ${port}`);
     });

@@ -1,0 +1,95 @@
+### Test Breeze Wallet Features
+
+# Base URL
+@baseUrl = http://localhost:1011/api/v1
+
+# ===================== Breeze Wallet Packages (Public) =====================
+
+### Get All Breeze Wallet Packages
+GET {{baseUrl}}/breeze-wallet/packages
+
+### Get Breeze Wallet Package by ID
+GET {{baseUrl}}/breeze-wallet/packages/{{packageId}}
+
+# ===================== Breeze Wallet Packages (Admin Only) =====================
+
+### Create Breeze Wallet Package
+POST {{baseUrl}}/breeze-wallet/packages
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "name": "Starter Pack",
+  "amount": 100,
+  "price": 9.99,
+  "status": "ACTIVE"
+}
+
+### Create Another Package
+POST {{baseUrl}}/breeze-wallet/packages
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "name": "Premium Pack",
+  "amount": 500,
+  "price": 39.99,
+  "status": "ACTIVE"
+}
+
+### Update Breeze Wallet Package
+PATCH {{baseUrl}}/breeze-wallet/packages/{{packageId}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "name": "Updated Starter Pack",
+  "amount": 150,
+  "price": 14.99
+}
+
+### Delete Breeze Wallet Package
+DELETE {{baseUrl}}/breeze-wallet/packages/{{packageId}}
+Authorization: Bearer {{adminToken}}
+
+# ===================== User Wallet Operations (Authenticated) =====================
+
+### Top Up User's Breeze Wallet
+POST {{baseUrl}}/breeze-wallet/top-up
+Content-Type: application/json
+Authorization: Bearer {{userToken}}
+
+{
+  "packageId": "{{packageId}}"
+}
+
+### Get User's Wallet Balance
+GET {{baseUrl}}/breeze-wallet/balance/{{userId}}
+Authorization: Bearer {{userToken}}
+
+# ===================== Test Data Setup =====================
+
+### Login as Admin (to get admin token)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "admin123"
+}
+
+### Login as User (to get user token)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "user123"
+}
+
+# ===================== Variables =====================
+# Replace these with actual values from your database
+# @packageId = your-package-id-here
+# @userId = your-user-id-here
+# @adminToken = your-admin-jwt-token-here
+# @userToken = your-user-jwt-token-here

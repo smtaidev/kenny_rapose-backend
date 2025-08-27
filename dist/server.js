@@ -17,7 +17,7 @@ const app_1 = __importDefault(require("./app"));
 let server;
 const main = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const port = config_1.default.port || 1009;
+        const port = config_1.default.port || 1011;
         server = app_1.default.listen(port, () => {
             console.log(`Kenny Rappose Server is running on port ${port}`);
         });

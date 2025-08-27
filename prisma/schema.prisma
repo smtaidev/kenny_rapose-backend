@@ -28,6 +28,7 @@ model User {
   role            UserRole @default(USER)
   isActive        Boolean @default(true)
   aiCredits       Int     @default(6)
+  breezeWalletBalance Float @default(0) // Breeze Wallet balance
 
   
   // OTP for password reset and verification
@@ -117,6 +118,24 @@ model TourPackage {
 }
 
 enum TourPackageStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model BreezeWalletPackage {
+  id        String @id @default(uuid())
+  name      String
+  amount    Float
+  price     Float
+  status    BreezeWalletPackageStatus @default(ACTIVE)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("breeze_wallet_packages")
+}
+
+enum BreezeWalletPackageStatus {
   ACTIVE
   INACTIVE
 }
