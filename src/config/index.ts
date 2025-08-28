@@ -14,6 +14,12 @@ export default {
   base_url_server: process.env.BASE_URL_SERVER,
   base_url_client: process.env.BASE_URL_CLIENT,
 
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY as string,
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET as string,
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY as string,
+  },
+
   jwt: {
     access_secret: (process.env.JWT_ACCESS_SECRET || 'fallback-secret') as Secret,
     access_expires_in: (process.env.JWT_ACCESS_EXPIRES_IN || '1d') as string,

@@ -9,6 +9,7 @@ const user_route_1 = require("../modules/User/user.route");
 const aiCreditPackage_route_1 = require("../modules/AI-Credit/aiCreditPackage.route");
 const tourPackage_route_1 = require("../modules/TourPackage/tourPackage.route");
 const breezeWallet_route_1 = require("../modules/BreezeWallet/breezeWallet.route");
+const payment_routes_1 = require("../modules/payment/payment.routes");
 const router = express_1.default.Router();
 const moduleRoutes = [
     {
@@ -30,6 +31,10 @@ const moduleRoutes = [
     {
         path: '/breeze-wallet',
         route: breezeWallet_route_1.BreezeWalletRoutes,
+    },
+    {
+        path: '/payments',
+        route: payment_routes_1.paymentRouter,
     }
 ];
 moduleRoutes.forEach(route => router.use(route.path, route.route));

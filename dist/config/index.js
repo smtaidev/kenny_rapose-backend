@@ -15,6 +15,11 @@ exports.default = {
     brevo_api_key: process.env.BREVO_API_KEY,
     base_url_server: process.env.BASE_URL_SERVER,
     base_url_client: process.env.BASE_URL_CLIENT,
+    stripe: {
+        secretKey: process.env.STRIPE_SECRET_KEY,
+        webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+        publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+    },
     jwt: {
         access_secret: (process.env.JWT_ACCESS_SECRET || 'fallback-secret'),
         access_expires_in: (process.env.JWT_ACCESS_EXPIRES_IN || '1d'),

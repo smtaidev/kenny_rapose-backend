@@ -1,0 +1,77 @@
+import { Response } from 'express';
+import { PaymentService } from './payment.service';
+import catchAsync from '../../utils/catchAsync';
+import sendResponse from '../../utils/sendResponse';
+import { AuthRequest } from '../../middlewares/auth';
+
+const createCheckoutSession = catchAsync(async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.userId;
+  const payload = req.body;
+  
+  const result = await PaymentService.createCheckoutSession(userId!, payload);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'Checkout session created successfully',
+    data: result,
+  });
+});
+
+const handleWebhook = catchAsync(async (req: AuthRequest, res: Response) => {
+  const sig = req.headers['stripe-signature'] as string;
+  
+  if (!sig) {
+    return res.status(400).send('Missing stripe-signature header');
+  }
+
+  try {
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    const event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+
+    await PaymentService.handleWebhook(event);
+
+    res.json({ received: true });
+  } catch (err: any) {
+    console.error('Webhook error:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+});
+
+const getPaymentHistory = catchAsync(async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.userId;
+  
+  const result = await PaymentService.getPaymentHistory(userId!);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'Payment history retrieved successfully',
+    data: result,
+  });
+});
+
+const getPaymentById = catchAsync(async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.userId;
+  const { paymentId } = req.params;
+  
+  const result = await PaymentService.getPaymentById(paymentId, userId!);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'Payment details retrieved successfully',
+    data: result,
+  });
+});
+
+export const PaymentController = {
+  createCheckoutSession,
+  handleWebhook,
+  getPaymentHistory,
+  getPaymentById,
+};

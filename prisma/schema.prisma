@@ -30,6 +30,8 @@ model User {
   aiCredits       Int     @default(6)
   breezeWalletBalance Float @default(0) // Breeze Wallet balance
 
+  // Stripe customer ID for payments
+  stripeCustomerId String?
   
   // OTP for password reset and verification
   otp          String?
@@ -46,6 +48,10 @@ model User {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
+
+  // Relations
+  payments Payment[]
+  creditPurchases CreditPurchase[]
 
   @@map("users")
 }
@@ -71,6 +77,9 @@ model AiCreditPackage {
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Relations
+  creditPurchases CreditPurchase[]
 
   @@map("ai_credit_packages")
 }
@@ -138,4 +147,62 @@ model BreezeWalletPackage {
 enum BreezeWalletPackageStatus {
   ACTIVE
   INACTIVE
+}
+
+// Payment tracking model
+model Payment {
+  id            String @id @default(uuid())
+  userId        String
+  amount        Float
+  currency      String @default("USD")
+  status        PaymentStatus @default(PENDING)
+  paymentIntentId String? // Stripe Payment Intent ID
+  checkoutSessionId String? // Stripe Checkout Session ID
+  metadata      Json? // Additional payment metadata
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creditPurchase CreditPurchase?
+
+  @@map("payments")
+}
+
+// AI Credit purchase tracking
+model CreditPurchase {
+  id                String @id @default(uuid())
+  userId            String
+  paymentId         String @unique // One-to-one relation with Payment
+  aiCreditPackageId String
+  creditsPurchased  Int
+  amountPaid        Float
+  status            CreditPurchaseStatus @default(PENDING)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  aiCreditPackage AiCreditPackage @relation(fields: [aiCreditPackageId], references: [id])
+
+  @@map("credit_purchases")
+}
+
+// Payment status enum
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELED
+}
+
+// Credit purchase status enum
+enum CreditPurchaseStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
 }

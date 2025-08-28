@@ -1,0 +1,141 @@
+### Test Stripe AI Credit Payment API
+
+# Create Checkout Session for AI Credit Purchase
+POST http://localhost:5000/api/v1/payments/create-checkout-session
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "packageId": "AI_CREDIT_PACKAGE_ID_HERE",
+  "successUrl": "http://localhost:3000/payment/success",
+  "cancelUrl": "http://localhost:3000/payment/cancel"
+}
+
+###
+
+# Get User Payment History
+GET http://localhost:5000/api/v1/payments/history
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+
+###
+
+# Get Specific Payment Details
+GET http://localhost:5000/api/v1/payments/PAYMENT_ID_HERE
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+
+###
+
+# Test Webhook (This will be called by Stripe automatically)
+POST http://localhost:5000/api/v1/payments/webhook
+Content-Type: application/json
+stripe-signature: whsec_test_signature_here
+
+{
+  "type": "checkout.session.completed",
+  "data": {
+    "object": {
+      "id": "cs_test_session_id",
+      "status": "complete",
+      "amount_total": 999,
+      "currency": "usd",
+      "customer": "cus_test_customer_id",
+      "metadata": {
+        "userId": "user_id_here",
+        "packageId": "package_id_here",
+        "credits": "50",
+        "amount": "9.99"
+      },
+      "payment_intent": "pi_test_payment_intent_id"
+    }
+  }
+}
+
+###
+
+# Test with Different AI Credit Packages
+
+## Starter Package (50 Credits - $9.99)
+POST http://localhost:5000/api/v1/payments/create-checkout-session
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "packageId": "STARTER_PACKAGE_ID",
+  "successUrl": "http://localhost:3000/payment/success?package=starter",
+  "cancelUrl": "http://localhost:3000/payment/cancel?package=starter"
+}
+
+###
+
+## Pro Package (200 Credits - $29.99)
+POST http://localhost:5000/api/v1/payments/create-checkout-session
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "packageId": "PRO_PACKAGE_ID",
+  "successUrl": "http://localhost:3000/payment/success?package=pro",
+  "cancelUrl": "http://localhost:3000/payment/cancel?package=pro"
+}
+
+###
+
+## Enterprise Package (500 Credits - $59.99)
+POST http://localhost:5000/api/v1/payments/create-checkout-session
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "packageId": "ENTERPRISE_PACKAGE_ID",
+  "successUrl": "http://localhost:3000/payment/success?package=enterprise",
+  "cancelUrl": "http://localhost:3000/payment/cancel?package=enterprise"
+}
+
+###
+
+# Test Error Cases
+
+## Invalid Package ID
+POST http://localhost:5000/api/v1/payments/create-checkout-session
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "packageId": "invalid-uuid-here",
+  "successUrl": "http://localhost:3000/payment/success",
+  "cancelUrl": "http://localhost:3000/payment/cancel"
+}
+
+###
+
+## Missing Authentication
+POST http://localhost:5000/api/v1/payments/create-checkout-session
+Content-Type: application/json
+
+{
+  "packageId": "AI_CREDIT_PACKAGE_ID_HERE",
+  "successUrl": "http://localhost:3000/payment/success",
+  "cancelUrl": "http://localhost:3000/payment/cancel"
+}
+
+###
+
+## Invalid URLs
+POST http://localhost:5000/api/v1/payments/create-checkout-session
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "packageId": "AI_CREDIT_PACKAGE_ID_HERE",
+  "successUrl": "not-a-valid-url",
+  "cancelUrl": "also-not-valid"
+}
+
+###
+
+# Notes:
+# 1. Replace YOUR_ACCESS_TOKEN_HERE with a valid JWT token
+# 2. Replace AI_CREDIT_PACKAGE_ID_HERE with actual package IDs from your database
+# 3. The webhook endpoint will be called automatically by Stripe
+# 4. Test with Stripe test cards for payment simulation
+# 5. Monitor your server logs for webhook processing
