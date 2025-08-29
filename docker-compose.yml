@@ -1,14 +1,18 @@
+version: '3.8'
+
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgres:14
+    container_name: kenny-rappose-postgres
     environment:
       POSTGRES_DB: kenny_rappose
-      POSTGRES_USER: postgres
+      POSTGRES_USER: kenny_rappose
       POSTGRES_PASSWORD: 12345678
     ports:
       - "5436:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
 
 volumes:
   postgres_data:
