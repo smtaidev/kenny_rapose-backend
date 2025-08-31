@@ -10,18 +10,11 @@ export interface ICheckoutSessionResponse {
   sessionUrl: string;
 }
 
+// Updated to handle any Stripe webhook event type
 export interface IPaymentWebhook {
   type: string;
   data: {
-    object: {
-      id: string;
-      status: string;
-      amount_total: number;
-      currency: string;
-      customer: string;
-      metadata: Record<string, any>;
-      payment_intent?: string;
-    };
+    object: any; // Allow any Stripe object for maximum flexibility
   };
 }
 

@@ -178,17 +178,20 @@ const handleWebhook = async (payload: IPaymentWebhook): Promise<void> => {
   const { type, data } = payload;
   const session = data.object;
 
+  // Add proper event type checking
   if (type === 'checkout.session.completed') {
     await handlePaymentSuccess(session);
   } else if (type === 'checkout.session.expired') {
     await handlePaymentExpired(session);
+  } else {
+    console.log(`Unhandled webhook event type: ${type}`);
   }
 };
 
 const handlePaymentSuccess = async (session: any): Promise<void> => {
   try {
     const { userId, packageId, packageType, credits, amount } = session.metadata;
-
+    
     // Update payment status
     await prisma.payment.updateMany({
       where: { checkoutSessionId: session.id },
@@ -220,8 +223,6 @@ const handlePaymentSuccess = async (session: any): Promise<void> => {
           },
         },
       });
-
-      console.log(`AI Credit payment successful: User ${userId} received ${credits} credits`);
     } else if (packageType === 'breeze-wallet') {
       // Update breeze wallet purchase status
       await prisma.breezeWalletPurchase.updateMany({
@@ -244,8 +245,6 @@ const handlePaymentSuccess = async (session: any): Promise<void> => {
           },
         },
       });
-
-      console.log(`Breeze Wallet payment successful: User ${userId} received $${amount} in wallet`);
     }
   } catch (error) {
     console.error('Error handling payment success:', error);
@@ -255,6 +254,8 @@ const handlePaymentSuccess = async (session: any): Promise<void> => {
 
 const handlePaymentExpired = async (session: any): Promise<void> => {
   try {
+    const { packageType } = session.metadata;
+    
     // Update payment status
     await prisma.payment.updateMany({
       where: { checkoutSessionId: session.id },
@@ -263,17 +264,31 @@ const handlePaymentExpired = async (session: any): Promise<void> => {
       },
     });
 
-    // Update credit purchase status
-    await prisma.creditPurchase.updateMany({
-      where: {
-        payment: {
-          checkoutSessionId: session.id,
+    if (packageType === 'ai-credit') {
+      // Update credit purchase status
+      await prisma.creditPurchase.updateMany({
+        where: {
+          payment: {
+            checkoutSessionId: session.id,
+          },
         },
-      },
-      data: {
-        status: 'FAILED',
-      },
-    });
+        data: {
+          status: 'FAILED',
+        },
+      });
+    } else if (packageType === 'breeze-wallet') {
+      // Update breeze wallet purchase status
+      await prisma.breezeWalletPurchase.updateMany({
+        where: {
+          payment: {
+            checkoutSessionId: session.id,
+          },
+        },
+        data: {
+          status: 'FAILED',
+        },
+      });
+    }
 
     console.log(`Payment expired: Session ${session.id}`);
   } catch (error) {
@@ -296,6 +311,16 @@ const getPaymentHistory = async (userId: string) => {
           },
         },
       },
+      breezeWalletPurchase: {
+        include: {
+          breezeWalletPackage: {
+            select: {
+              name: true,
+              amount: true,
+            },
+          },
+        },
+      },
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -313,6 +338,16 @@ const getPaymentById = async (paymentId: string, userId: string) => {
             select: {
               name: true,
               credits: true,
+            },
+          },
+        },
+      },
+      breezeWalletPurchase: {
+        include: {
+          breezeWalletPackage: {
+            select: {
+              name: true,
+              amount: true,
             },
           },
         },

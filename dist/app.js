@@ -19,8 +19,27 @@ app.use((0, cors_1.default)({
     allowedHeaders: ["Content-Type", "Authorization"],
     exposedHeaders: ["Content-Type", "Authorization"],
 }));
-app.use(express_1.default.json());
-app.use(express_1.default.urlencoded({ extended: true }));
+// Exclude webhook route from global body parsing
+app.use((req, res, next) => {
+    if (req.path === '/api/v1/payments/webhook') {
+        // Skip body parsing for webhook route
+        next();
+    }
+    else {
+        // Apply body parsing for all other routes
+        express_1.default.json()(req, res, next);
+    }
+});
+app.use((req, res, next) => {
+    if (req.path === '/api/v1/payments/webhook') {
+        // Skip URL encoding for webhook route
+        next();
+    }
+    else {
+        // Apply URL encoding for all other routes
+        express_1.default.urlencoded({ extended: true })(req, res, next);
+    }
+});
 app.use((0, cookie_parser_1.default)());
 app.get("/", (req, res) => {
     res.send({

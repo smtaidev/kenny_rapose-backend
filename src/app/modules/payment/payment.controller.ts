@@ -3,6 +3,7 @@ import { PaymentService } from './payment.service';
 import catchAsync from '../../utils/catchAsync';
 import sendResponse from '../../utils/sendResponse';
 import { AuthRequest } from '../../middlewares/auth';
+import { stripe } from '../../lib/stripe';
 
 const createCheckoutSession = catchAsync(async (req: AuthRequest, res: Response) => {
   const userId = req.user?.userId;
@@ -18,7 +19,7 @@ const createCheckoutSession = catchAsync(async (req: AuthRequest, res: Response)
   });
 });
 
-const handleWebhook = catchAsync(async (req: AuthRequest, res: Response) => {
+const handleWebhook = catchAsync(async (req: any, res: Response) => {
   const sig = req.headers['stripe-signature'] as string;
   
   if (!sig) {
@@ -26,15 +27,14 @@ const handleWebhook = catchAsync(async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    // Use configured Stripe instance instead of creating new one
     const event = stripe.webhooks.constructEvent(
       req.body,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET
+      process.env.STRIPE_WEBHOOK_SECRET!
     );
 
     await PaymentService.handleWebhook(event);
-
     res.json({ received: true });
   } catch (err: any) {
     console.error('Webhook error:', err.message);
