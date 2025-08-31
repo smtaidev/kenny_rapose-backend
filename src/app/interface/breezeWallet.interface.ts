@@ -30,8 +30,3 @@ export interface IUserBreezeWallet {
   email: string;
   breezeWalletBalance: number;
 }
-
-export interface ITopUpRequest {
-  packageId: string;
-  userId: string;
-}

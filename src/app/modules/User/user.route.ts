@@ -1,19 +1,30 @@
 import { Router } from 'express';
 import { UserController } from './user.controller';
 import validateRequest from '../../middlewares/validateRequest';
-import auth from '../../middlewares/auth';
+import auth, { requireSuperAdmin } from '../../middlewares/auth';
 import {
   updateUserProfileZodSchema,
   requestOtpZodSchema,
   verifyOtpZodSchema,
   changePasswordZodSchema,
   resetPasswordZodSchema,
+  updateUserRoleZodSchema,
 } from './user.validation';
+import { requireAdmin } from '../../middlewares/auth';
 
 const router = Router();
 
 //==============Get User Profile=================
 router.get('/profile', auth, UserController.getUserProfile);
+
+//==============Get All Users (Admin Only)=================
+router.get('/all', auth, requireAdmin, UserController.getAllUsers);
+
+//==============Get User By ID (Admin Only)=================
+router.get('/:id', auth, requireAdmin, UserController.getUserById);
+
+//==============Update User Role (Admin Only)=================
+router.patch('/:id/role', auth, requireSuperAdmin, validateRequest(updateUserRoleZodSchema), UserController.updateUserRole);
 
 //==============Update Profile==============
 router.patch(

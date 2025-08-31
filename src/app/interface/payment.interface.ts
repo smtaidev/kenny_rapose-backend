@@ -1,5 +1,6 @@
 export interface ICreateCheckoutSession {
   packageId: string;
+  packageType: 'ai-credit' | 'breeze-wallet'; // New field to distinguish package types
   successUrl: string;
   cancelUrl: string;
 }

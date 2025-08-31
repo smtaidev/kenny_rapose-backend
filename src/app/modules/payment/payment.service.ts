@@ -8,7 +8,7 @@ const createCheckoutSession = async (
   userId: string,
   payload: ICreateCheckoutSession
 ): Promise<ICheckoutSessionResponse> => {
-  const { packageId, successUrl, cancelUrl } = payload;
+  const { packageId, packageType, successUrl, cancelUrl } = payload;
 
   // Check if Stripe is configured
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -24,15 +24,44 @@ const createCheckoutSession = async (
     throw new AppError(httpStatus.NOT_FOUND, 'User not found');
   }
 
-  // Fetch AI credit package
-  const creditPackage = await prisma.aiCreditPackage.findUnique({
-    where: { id: packageId },
-  });
-  if (!creditPackage) {
-    throw new AppError(httpStatus.NOT_FOUND, 'AI Credit Package not found');
-  }
-  if (creditPackage.status !== 'ACTIVE') {
-    throw new AppError(httpStatus.BAD_REQUEST, 'This package is not available for purchase');
+  let packageData: any;
+  let packageName: string;
+  let packageDescription: string;
+  let packageAmount: number;
+
+  // Fetch package based on type
+  if (packageType === 'ai-credit') {
+    const creditPackage = await prisma.aiCreditPackage.findUnique({
+      where: { id: packageId },
+    });
+    if (!creditPackage) {
+      throw new AppError(httpStatus.NOT_FOUND, 'AI Credit Package not found');
+    }
+    if (creditPackage.status !== 'ACTIVE') {
+      throw new AppError(httpStatus.BAD_REQUEST, 'This package is not available for purchase');
+    }
+    
+    packageData = creditPackage;
+    packageName = creditPackage.name;
+    packageDescription = `${creditPackage.credits} AI Credits`;
+    packageAmount = creditPackage.price;
+  } else if (packageType === 'breeze-wallet') {
+    const walletPackage = await prisma.breezeWalletPackage.findUnique({
+      where: { id: packageId },
+    });
+    if (!walletPackage) {
+      throw new AppError(httpStatus.NOT_FOUND, 'Breeze Wallet Package not found');
+    }
+    if (walletPackage.status !== 'ACTIVE') {
+      throw new AppError(httpStatus.BAD_REQUEST, 'This package is not available for purchase');
+    }
+    
+    packageData = walletPackage;
+    packageName = walletPackage.name;
+    packageDescription = `$${walletPackage.amount} Wallet Credit`;
+    packageAmount = walletPackage.price;
+  } else {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid package type. Must be "ai-credit" or "breeze-wallet"');
   }
 
   try {
@@ -63,14 +92,16 @@ const createCheckoutSession = async (
           price_data: {
             currency: 'usd',
             product_data: {
-              name: creditPackage.name,
-              description: `${creditPackage.credits} AI Credits`,
+              name: packageName,
+              description: packageDescription,
               metadata: {
                 packageId: packageId,
-                credits: creditPackage.credits.toString(),
+                packageType: packageType,
+                ...(packageType === 'ai-credit' ? { credits: packageData.credits.toString() } : {}),
+                ...(packageType === 'breeze-wallet' ? { amount: packageData.amount.toString() } : {}),
               },
             },
-            unit_amount: Math.round(creditPackage.price * 100), // Convert to cents
+            unit_amount: Math.round(packageAmount * 100), // Convert to cents
           },
           quantity: 1,
         },
@@ -81,8 +112,10 @@ const createCheckoutSession = async (
       metadata: {
         userId: userId,
         packageId: packageId,
-        credits: creditPackage.credits.toString(),
-        amount: creditPackage.price.toString(),
+        packageType: packageType,
+        ...(packageType === 'ai-credit' ? { credits: packageData.credits.toString() } : {}),
+        ...(packageType === 'breeze-wallet' ? { amount: packageData.amount.toString() } : {}),
+        amount: packageAmount.toString(),
       },
     });
 
@@ -90,29 +123,43 @@ const createCheckoutSession = async (
     const payment = await prisma.payment.create({
       data: {
         userId,
-        amount: creditPackage.price,
+        amount: packageAmount,
         currency: 'USD',
         status: 'PENDING',
         checkoutSessionId: session.id,
         metadata: {
           packageId: packageId,
-          credits: creditPackage.credits,
-          packageName: creditPackage.name,
+          packageType: packageType,
+          ...(packageType === 'ai-credit' ? { credits: packageData.credits, packageName: packageData.name } : {}),
+          ...(packageType === 'breeze-wallet' ? { amount: packageData.amount, packageName: packageData.name } : {}),
         },
       },
     });
 
-    // Create credit purchase record
-    await prisma.creditPurchase.create({
-      data: {
-        userId,
-        paymentId: payment.id,
-        aiCreditPackageId: packageId,
-        creditsPurchased: creditPackage.credits,
-        amountPaid: creditPackage.price,
-        status: 'PENDING',
-      },
-    });
+    // Create appropriate purchase record based on package type
+    if (packageType === 'ai-credit') {
+      await prisma.creditPurchase.create({
+        data: {
+          userId,
+          paymentId: payment.id,
+          aiCreditPackageId: packageId,
+          creditsPurchased: packageData.credits,
+          amountPaid: packageAmount,
+          status: 'PENDING',
+        },
+      });
+    } else if (packageType === 'breeze-wallet') {
+      await prisma.breezeWalletPurchase.create({
+        data: {
+          userId,
+          paymentId: payment.id,
+          breezeWalletPackageId: packageId,
+          amountPurchased: packageData.amount,
+          amountPaid: packageAmount,
+          status: 'PENDING',
+        },
+      });
+    }
 
     return {
       sessionId: session.id,
@@ -140,7 +187,7 @@ const handleWebhook = async (payload: IPaymentWebhook): Promise<void> => {
 
 const handlePaymentSuccess = async (session: any): Promise<void> => {
   try {
-    const { userId, packageId, credits, amount } = session.metadata;
+    const { userId, packageId, packageType, credits, amount } = session.metadata;
 
     // Update payment status
     await prisma.payment.updateMany({
@@ -151,29 +198,55 @@ const handlePaymentSuccess = async (session: any): Promise<void> => {
       },
     });
 
-    // Update credit purchase status
-    await prisma.creditPurchase.updateMany({
-      where: {
-        payment: {
-          checkoutSessionId: session.id,
+    if (packageType === 'ai-credit') {
+      // Update credit purchase status
+      await prisma.creditPurchase.updateMany({
+        where: {
+          payment: {
+            checkoutSessionId: session.id,
+          },
         },
-      },
-      data: {
-        status: 'COMPLETED',
-      },
-    });
-
-    // Add credits to user
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        aiCredits: {
-          increment: parseInt(credits),
+        data: {
+          status: 'COMPLETED',
         },
-      },
-    });
+      });
 
-    console.log(`Payment successful: User ${userId} received ${credits} credits`);
+      // Add credits to user
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          aiCredits: {
+            increment: parseInt(credits),
+          },
+        },
+      });
+
+      console.log(`AI Credit payment successful: User ${userId} received ${credits} credits`);
+    } else if (packageType === 'breeze-wallet') {
+      // Update breeze wallet purchase status
+      await prisma.breezeWalletPurchase.updateMany({
+        where: {
+          payment: {
+            checkoutSessionId: session.id,
+          },
+        },
+        data: {
+          status: 'COMPLETED',
+        },
+      });
+
+      // Add amount to user's breeze wallet
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          breezeWalletBalance: {
+            increment: parseFloat(amount),
+          },
+        },
+      });
+
+      console.log(`Breeze Wallet payment successful: User ${userId} received $${amount} in wallet`);
+    }
   } catch (error) {
     console.error('Error handling payment success:', error);
     throw error;

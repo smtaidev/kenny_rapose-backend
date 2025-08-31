@@ -266,6 +266,105 @@ const softDeleteUser = (email) => __awaiter(void 0, void 0, void 0, function* ()
     });
     return { message: 'User soft deleted successfully' };
 });
+//=====================Get All Users (Admin Only)=====================
+const getAllUsers = () => __awaiter(void 0, void 0, void 0, function* () {
+    const users = yield prisma_1.default.user.findMany({
+        where: { isActive: true }, // Only active users
+        select: {
+            id: true,
+            travelerNumber: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+            isActive: true,
+            aiCredits: true,
+            gender: true,
+            dateOfBirth: true,
+            phone: true,
+            address: true,
+            city: true,
+            state: true,
+            zip: true,
+            country: true,
+            isEmailVerified: true,
+            createdAt: true,
+            updatedAt: true,
+        },
+        orderBy: { createdAt: 'desc' }, // Newest first
+    });
+    return users;
+});
+//=====================Get User By ID (Admin Only)=====================
+const getUserById = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    const user = yield prisma_1.default.user.findUnique({
+        where: { id: userId, isActive: true },
+        select: {
+            id: true,
+            travelerNumber: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+            isActive: true,
+            aiCredits: true,
+            gender: true,
+            dateOfBirth: true,
+            phone: true,
+            address: true,
+            city: true,
+            state: true,
+            zip: true,
+            country: true,
+            isEmailVerified: true,
+            createdAt: true,
+            updatedAt: true,
+        },
+    });
+    if (!user) {
+        throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'User not found');
+    }
+    return user;
+});
+//=====================Update User Role (Admin Only)=====================
+const updateUserRole = (userId, newRole) => __awaiter(void 0, void 0, void 0, function* () {
+    const user = yield prisma_1.default.user.findUnique({
+        where: { id: userId, isActive: true },
+    });
+    if (!user) {
+        throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'User not found');
+    }
+    // Validate role
+    if (!['USER', 'ADMIN', 'SUPER_ADMIN'].includes(newRole)) {
+        throw new AppError_1.default(http_status_1.default.BAD_REQUEST, 'Invalid role');
+    }
+    const updatedUser = yield prisma_1.default.user.update({
+        where: { id: userId },
+        data: { role: newRole },
+        select: {
+            id: true,
+            travelerNumber: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+            isActive: true,
+            aiCredits: true,
+            gender: true,
+            dateOfBirth: true,
+            phone: true,
+            address: true,
+            city: true,
+            state: true,
+            zip: true,
+            country: true,
+            isEmailVerified: true,
+            createdAt: true,
+            updatedAt: true,
+        },
+    });
+    return updatedUser;
+});
 exports.UserService = {
     getUserProfile,
     updateUserProfile,
@@ -276,4 +375,7 @@ exports.UserService = {
     resetPassword,
     resendOtp,
     softDeleteUser,
+    getAllUsers,
+    getUserById,
+    updateUserRole,
 };

@@ -3,7 +3,6 @@ import catchAsync from '../../utils/catchAsync';
 import sendResponse from '../../utils/sendResponse';
 import { BreezeWalletService } from './breezeWallet.service';
 import httpStatus from 'http-status';
-import { AuthRequest } from '../../middlewares/auth';
 
 //=====================Create Breeze Wallet Package=====================
 const createBreezeWalletPackage = catchAsync(async (req: Request, res: Response) => {
@@ -68,25 +67,6 @@ const getAllBreezeWalletPackages = catchAsync(async (req: Request, res: Response
   });
 });
 
-//=====================Top Up User's Breeze Wallet=====================
-const topUpWallet = catchAsync(async (req: AuthRequest, res: Response) => {
-  const { packageId } = req.body;
-  const userId = req.user?.userId; // From auth middleware
-
-  if (!userId) {
-    throw new Error('User ID not found');
-  }
-
-  const result = await BreezeWalletService.topUpWallet(userId, packageId);
-
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'Wallet topped up successfully',
-    data: result,
-  });
-});
-
 //=====================Get User's Breeze Wallet Balance=====================
 const getWalletBalance = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.params;
@@ -106,6 +86,5 @@ export const BreezeWalletController = {
   deleteBreezeWalletPackage,
   getBreezeWalletPackageById,
   getAllBreezeWalletPackages,
-  topUpWallet,
   getWalletBalance,
 };

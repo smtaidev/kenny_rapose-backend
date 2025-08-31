@@ -3,9 +3,7 @@ import { BreezeWalletController } from './breezeWallet.controller';
 import validateRequest from '../../middlewares/validateRequest';
 import { 
   createBreezeWalletPackageZodSchema, 
-  updateBreezeWalletPackageZodSchema,
-  topUpWalletZodSchema,
-  getWalletBalanceZodSchema
+  updateBreezeWalletPackageZodSchema
 } from './breezeWallet.validation';
 import auth, { requireAdmin } from '../../middlewares/auth';
 
@@ -49,20 +47,12 @@ router.delete(
   BreezeWalletController.deleteBreezeWalletPackage
 );
 
-//=====================Top Up User's Breeze Wallet (Authenticated User)=====================
-router.post(
-  '/top-up',
-  auth,
-  validateRequest(topUpWalletZodSchema),
-  BreezeWalletController.topUpWallet
-);
-
 //=====================Get User's Breeze Wallet Balance (Authenticated User)=====================
 router.get(
   '/balance/:userId',
   auth,
-  validateRequest(getWalletBalanceZodSchema),
   BreezeWalletController.getWalletBalance
 );
+
 
 export const BreezeWalletRoutes = router;

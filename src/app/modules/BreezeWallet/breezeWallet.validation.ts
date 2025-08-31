@@ -21,12 +21,6 @@ export const updateBreezeWalletPackageZodSchema = z.object({
   }),
 });
 
-export const topUpWalletZodSchema = z.object({
-  body: z.object({
-    packageId: z.string().min(1, 'Package ID is required'),
-  }),
-});
-
 export const getWalletBalanceZodSchema = z.object({
   params: z.object({
     userId: z.string().min(1, 'User ID is required'),

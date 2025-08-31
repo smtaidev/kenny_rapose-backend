@@ -124,6 +124,39 @@ const softDeleteUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0,
         data: result,
     });
 }));
+//=====================Get User By ID (Admin Only)=====================
+const getUserById = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.params;
+    const result = yield user_service_1.UserService.getUserById(id);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: 'User retrieved successfully',
+        data: result,
+    });
+}));
+//=====================Get All Users (Admin Only)=====================
+const getAllUsers = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield user_service_1.UserService.getAllUsers();
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: 'All users retrieved successfully',
+        data: result,
+    });
+}));
+//=====================Update User Role (Admin Only)=====================
+const updateUserRole = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.params;
+    const { role } = req.body;
+    const result = yield user_service_1.UserService.updateUserRole(id, role);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: 'User role updated successfully',
+        data: result,
+    });
+}));
 exports.UserController = {
     getUserProfile,
     updateUserProfile,
@@ -134,4 +167,7 @@ exports.UserController = {
     resetPassword,
     resendOtp,
     softDeleteUser,
+    getUserById,
+    getAllUsers,
+    updateUserRole,
 };

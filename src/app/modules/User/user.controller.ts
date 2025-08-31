@@ -127,6 +127,45 @@ const softDeleteUser = catchAsync(async (req: AuthRequest, res: Response) => {
   });
 });
 
+//=====================Get User By ID (Admin Only)=====================
+const getUserById = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await UserService.getUserById(id);
+
+  sendResponse<IUserResponse>(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User retrieved successfully',
+    data: result,
+  });
+});
+
+//=====================Get All Users (Admin Only)=====================
+const getAllUsers = catchAsync(async (req: Request, res: Response) => {
+  const result = await UserService.getAllUsers();
+
+  sendResponse<IUserResponse[]>(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'All users retrieved successfully',
+    data: result,
+  });
+});
+
+//=====================Update User Role (Admin Only)=====================
+const updateUserRole = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { role } = req.body;
+  const result = await UserService.updateUserRole(id, role);
+
+  sendResponse<IUserResponse>(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User role updated successfully',
+    data: result,
+  });
+});
+
 export const UserController = {
   getUserProfile,
   updateUserProfile,
@@ -137,4 +176,7 @@ export const UserController = {
   resetPassword,
   resendOtp,
   softDeleteUser,
+  getUserById,
+  getAllUsers,
+  updateUserRole,
 };

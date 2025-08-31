@@ -299,6 +299,115 @@ const softDeleteUser = async (email: string) => {
   return { message: 'User soft deleted successfully' };
 };
 
+//=====================Get All Users (Admin Only)=====================
+const getAllUsers = async () => {
+  const users = await prisma.user.findMany({
+    where: { isActive: true }, // Only active users
+    select: {
+      id: true,
+      travelerNumber: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      role: true,
+      isActive: true,
+      aiCredits: true,
+      gender: true,
+      dateOfBirth: true,
+      phone: true,
+      address: true,
+      city: true,
+      state: true,
+      zip: true,
+      country: true,
+      isEmailVerified: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+    orderBy: { createdAt: 'desc' }, // Newest first
+  });
+
+  return users;
+};
+
+//=====================Get User By ID (Admin Only)=====================
+const getUserById = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId, isActive: true },
+    select: {
+      id: true,
+      travelerNumber: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      role: true,
+      isActive: true,
+      aiCredits: true,
+      gender: true,
+      dateOfBirth: true,
+      phone: true,
+      address: true,
+      city: true,
+      state: true,
+      zip: true,
+      country: true,
+      isEmailVerified: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  return user;
+};
+
+//=====================Update User Role (Admin Only)=====================
+const updateUserRole = async (userId: string, newRole: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId, isActive: true },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  // Validate role
+  if (!['USER', 'ADMIN', 'SUPER_ADMIN'].includes(newRole)) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid role');
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: { role: newRole as any },
+    select: {
+      id: true,
+      travelerNumber: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      role: true,
+      isActive: true,
+      aiCredits: true,
+      gender: true,
+      dateOfBirth: true,
+      phone: true,
+      address: true,
+      city: true,
+      state: true,
+      zip: true,
+      country: true,
+      isEmailVerified: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  return updatedUser;
+};
+
 export const UserService = {
   getUserProfile,
   updateUserProfile,
@@ -309,4 +418,7 @@ export const UserService = {
   resetPassword,
   resendOtp,
   softDeleteUser,
+  getAllUsers,
+  getUserById,
+  updateUserRole,
 };

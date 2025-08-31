@@ -52,6 +52,7 @@ model User {
   // Relations
   payments Payment[]
   creditPurchases CreditPurchase[]
+  breezeWalletPurchases BreezeWalletPurchase[]
 
   @@map("users")
 }
@@ -90,38 +91,39 @@ enum AIPackageStatus {
 }
 
 model TourPackage {
-  id            String @id @default(uuid())
-  packageName   String
-  about         String
-  star          Float  // Rating (e.g., 4.5)
-  packagePrice  Float  // Total package price
-  ageRangeFrom  Int    // Minimum age
-  ageRangeTo    Int    // Maximum age
-  tourDuration  Int    // Duration in days
-  whatIncluded  String[] // Array of included items
-  whatNotIncluded String[] // Array of excluded items
-  additionalInfo String[] // Array of additional information
+  id                String @id @default(uuid())
+  packageName       String
+  about             String
+  star              Float  // Rating (e.g., 4.5)
+  packagePriceAdult Float  // Adult package price
+  packagePriceChild Float  // Child package price
+  packageCategory   String // Package category (e.g., "Adventure", "Cultural", "Relaxation")
+  ageRangeFrom      Int    // Minimum age
+  ageRangeTo        Int    // Maximum age
+  whatIncluded      String[] // Array of included items
+  whatNotIncluded   String[] // Array of excluded items
+  additionalInfo    String[] // Array of additional information
   cancellationPolicy String[] // Array of cancellation policies
-  help          String
-  breezeCredit  Int    // Breeze credit value
+  help              String
+  breezeCredit      Int    // Breeze credit value
   
   // Legacy fields (keeping for backward compatibility)
-  totalMembers  Int?
-  pricePerPerson Float?
-  startDay      DateTime?
-  endDay        DateTime?
-  citiesVisited String[] // Array of cities
-  tourType      String?
-  activities    String[] // Array of activities
-  dailyActivity Json?    // Daily activity object with day1, day2, etc.
-  highlights    String?
-  description  String?
-  photos       String[] // Array of photo URLs
-  status       TourPackageStatus @default(ACTIVE)
+  totalMembers      Int?
+  pricePerPerson    Float?
+  startDay          DateTime?
+  endDay            DateTime?
+  citiesVisited     String[] // Array of cities
+  tourType          String?
+  activities        String[] // Array of activities
+  dailyActivity     Json?    // Daily activity object with day1, day2, etc.
+  highlights        String?
+  description       String?
+  photos            String[] // Array of photo URLs
+  status            TourPackageStatus @default(ACTIVE)
   
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  deletedAt    DateTime? // Soft delete
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  deletedAt         DateTime? // Soft delete
 
   @@map("tour_packages")
 }
@@ -141,33 +143,15 @@ model BreezeWalletPackage {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Relations
+  breezeWalletPurchases BreezeWalletPurchase[]
+
   @@map("breeze_wallet_packages")
 }
 
 enum BreezeWalletPackageStatus {
   ACTIVE
   INACTIVE
-}
-
-// Payment tracking model
-model Payment {
-  id            String @id @default(uuid())
-  userId        String
-  amount        Float
-  currency      String @default("USD")
-  status        PaymentStatus @default(PENDING)
-  paymentIntentId String? // Stripe Payment Intent ID
-  checkoutSessionId String? // Stripe Checkout Session ID
-  metadata      Json? // Additional payment metadata
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  creditPurchase CreditPurchase?
-
-  @@map("payments")
 }
 
 // AI Credit purchase tracking
@@ -189,6 +173,49 @@ model CreditPurchase {
   aiCreditPackage AiCreditPackage @relation(fields: [aiCreditPackageId], references: [id])
 
   @@map("credit_purchases")
+}
+
+// Breeze Wallet purchase tracking
+model BreezeWalletPurchase {
+  id                    String @id @default(uuid())
+  userId                String
+  paymentId             String @unique // One-to-one relation with Payment
+  breezeWalletPackageId String
+  amountPurchased       Float
+  amountPaid            Float
+  status                CreditPurchaseStatus @default(PENDING)
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  breezeWalletPackage BreezeWalletPackage @relation(fields: [breezeWalletPackageId], references: [id])
+
+  @@map("breeze_wallet_purchases")
+}
+
+// Payment tracking model
+model Payment {
+  id            String @id @default(uuid())
+  userId        String
+  amount        Float
+  currency      String @default("USD")
+  status        PaymentStatus @default(PENDING)
+  paymentIntentId String? // Stripe Payment Intent ID
+  checkoutSessionId String? // Stripe Checkout Session ID
+  metadata      Json? // Additional payment metadata
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creditPurchase CreditPurchase?
+  breezeWalletPurchase BreezeWalletPurchase?
+
+  @@map("payments")
 }
 
 // Payment status enum

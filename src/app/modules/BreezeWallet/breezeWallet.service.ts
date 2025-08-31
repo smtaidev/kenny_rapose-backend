@@ -1,7 +1,7 @@
 import prisma from '../../utils/prisma';
 import AppError from '../../errors/AppError';
 import httpStatus from 'http-status';
-import { ICreateBreezeWalletPackage, IUpdateBreezeWalletPackage, ITopUpRequest } from '../../interface/breezeWallet.interface';
+import { ICreateBreezeWalletPackage, IUpdateBreezeWalletPackage } from '../../interface/breezeWallet.interface';
 
 //=====================Create Breeze Wallet Package=====================
 const createBreezeWalletPackage = async (packageData: ICreateBreezeWalletPackage) => {
@@ -137,59 +137,6 @@ const getAllBreezeWalletPackages = async () => {
   return packages;
 };
 
-//=====================Top Up User's Breeze Wallet=====================
-const topUpWallet = async (userId: string, packageId: string) => {
-  // Check if user exists
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-  });
-
-  if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
-  }
-
-  // Check if package exists and is active
-  const packageData = await prisma.breezeWalletPackage.findUnique({
-    where: { id: packageId },
-  });
-
-  if (!packageData) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Breeze Wallet Package not found');
-  }
-
-  if (packageData.status !== 'ACTIVE') {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Package is not active');
-  }
-
-  // Update user's wallet balance
-  const updatedUser = await prisma.user.update({
-    where: { id: userId },
-    data: {
-      breezeWalletBalance: {
-        increment: packageData.amount,
-      },
-    },
-    select: {
-      id: true,
-      travelerNumber: true,
-      firstName: true,
-      lastName: true,
-      email: true,
-      breezeWalletBalance: true,
-    },
-  });
-
-  return {
-    message: 'Wallet topped up successfully',
-    package: {
-      name: packageData.name,
-      amount: packageData.amount,
-      price: packageData.price,
-    },
-    newBalance: updatedUser.breezeWalletBalance,
-  };
-};
-
 //=====================Get User's Breeze Wallet Balance=====================
 const getWalletBalance = async (userId: string) => {
   const user = await prisma.user.findUnique({
@@ -217,6 +164,5 @@ export const BreezeWalletService = {
   deleteBreezeWalletPackage,
   getBreezeWalletPackageById,
   getAllBreezeWalletPackages,
-  topUpWallet,
   getWalletBalance,
 };
