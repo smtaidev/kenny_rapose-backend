@@ -29,6 +29,19 @@ const updateBreezeWalletPackage = catchAsync(async (req: Request, res: Response)
   });
 });
 
+//=====================Reactivate Breeze Wallet Package=====================
+const reactivateBreezeWalletPackage = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await BreezeWalletService.reactivateBreezeWalletPackage(id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Breeze Wallet Package reactivated successfully',
+    data: result,
+  });
+});
+
 //=====================Delete Breeze Wallet Package=====================
 const deleteBreezeWalletPackage = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -55,9 +68,21 @@ const getBreezeWalletPackageById = catchAsync(async (req: Request, res: Response
   });
 });
 
-//=====================Get All Breeze Wallet Packages=====================
+//=====================Get All Breeze Wallet Packages (Admin Only)=====================
 const getAllBreezeWalletPackages = catchAsync(async (req: Request, res: Response) => {
   const result = await BreezeWalletService.getAllBreezeWalletPackages();
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Breeze Wallet Packages retrieved successfully',
+    data: result,
+  });
+});
+
+//=====================Get All Breeze Wallet Packages (Public)=====================
+const getAllActiveBreezeWalletPackages = catchAsync(async (req: Request, res: Response) => {
+  const result = await BreezeWalletService.getAllActiveBreezeWalletPackages();
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -83,8 +108,10 @@ const getWalletBalance = catchAsync(async (req: Request, res: Response) => {
 export const BreezeWalletController = {
   createBreezeWalletPackage,
   updateBreezeWalletPackage,
+  reactivateBreezeWalletPackage,
   deleteBreezeWalletPackage,
   getBreezeWalletPackageById,
   getAllBreezeWalletPackages,
+  getAllActiveBreezeWalletPackages,
   getWalletBalance,
 };

@@ -5,6 +5,7 @@ import { AiCreditPackageRoutes } from "../modules/AI-Credit/aiCreditPackage.rout
 import { TourPackageRoutes } from "../modules/TourPackage/tourPackage.route";
 import { BreezeWalletRoutes } from "../modules/BreezeWallet/breezeWallet.route";
 import { paymentRouter } from "../modules/payment/payment.routes";
+import { UserActivityRoutes } from "../modules/UserActivity/userActivity.route";
 
 const router: Router = express.Router();
 
@@ -32,6 +33,10 @@ const moduleRoutes = [
     {
         path: '/payments',
         route: paymentRouter,
+    },
+    {
+        path: '/user-activities',
+        route: UserActivityRoutes,
     }
 ];
 

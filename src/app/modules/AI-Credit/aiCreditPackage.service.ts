@@ -1,7 +1,10 @@
-import prisma from '../../utils/prisma';
-import AppError from '../../errors/AppError';
-import httpStatus from 'http-status';
-import { ICreateAiCreditPackage, IUpdateAiCreditPackage } from '../../interface/aiCreditPackage.interface';
+import prisma from "../../utils/prisma";
+import AppError from "../../errors/AppError";
+import httpStatus from "http-status";
+import {
+  ICreateAiCreditPackage,
+  IUpdateAiCreditPackage,
+} from "../../interface/aiCreditPackage.interface";
 
 //=====================Create AI Credit Package=====================
 const createAiCreditPackage = async (packageData: ICreateAiCreditPackage) => {
@@ -9,11 +12,15 @@ const createAiCreditPackage = async (packageData: ICreateAiCreditPackage) => {
   const existingPackage = await prisma.aiCreditPackage.findFirst({
     where: {
       name: packageData.name,
+      isDeleted: false,
     },
   });
 
   if (existingPackage) {
-    throw new AppError(httpStatus.CONFLICT, 'Package with this name already exists');
+    throw new AppError(
+      httpStatus.CONFLICT,
+      "Package with this name already exists"
+    );
   }
 
   // Create new package
@@ -34,14 +41,20 @@ const createAiCreditPackage = async (packageData: ICreateAiCreditPackage) => {
 };
 
 //=====================Update AI Credit Package=====================
-const updateAiCreditPackage = async (id: string, updateData: IUpdateAiCreditPackage) => {
+const updateAiCreditPackage = async (
+  id: string,
+  updateData: IUpdateAiCreditPackage
+) => {
   // Check if package exists
   const existingPackage = await prisma.aiCreditPackage.findUnique({
-    where: { id },
+    where: {
+      id,
+      isDeleted: false,
+    },
   });
 
   if (!existingPackage) {
-    throw new AppError(httpStatus.NOT_FOUND, 'AI Credit Package not found');
+    throw new AppError(httpStatus.NOT_FOUND, "AI Credit Package not found");
   }
 
   // If name is being updated, check for duplicates
@@ -50,11 +63,15 @@ const updateAiCreditPackage = async (id: string, updateData: IUpdateAiCreditPack
       where: {
         name: updateData.name,
         id: { not: id },
+        isDeleted: false,
       },
     });
 
     if (duplicatePackage) {
-      throw new AppError(httpStatus.CONFLICT, 'Package with this name already exists');
+      throw new AppError(
+        httpStatus.CONFLICT,
+        "Package with this name already exists"
+      );
     }
   }
 
@@ -84,21 +101,28 @@ const deleteAiCreditPackage = async (id: string) => {
   });
 
   if (!existingPackage) {
-    throw new AppError(httpStatus.NOT_FOUND, 'AI Credit Package not found');
+    throw new AppError(httpStatus.NOT_FOUND, "AI Credit Package not found");
   }
 
-  // Permanently delete the package
-  await prisma.aiCreditPackage.delete({
+  // Soft delete the package
+  await prisma.aiCreditPackage.update({
     where: { id },
+    data: {
+      status: "INACTIVE",
+      isDeleted: true,
+    },
   });
 
-  return { message: 'AI Credit Package deleted successfully' };
+  return { message: "AI Credit Package deleted successfully" };
 };
 
 //=====================Get AI Credit Package by ID=====================
 const getAiCreditPackageById = async (id: string) => {
   const creditPackage = await prisma.aiCreditPackage.findUnique({
-    where: { id },
+    where: {
+      id,
+      isDeleted: false,
+    },
     select: {
       id: true,
       name: true,
@@ -111,7 +135,7 @@ const getAiCreditPackageById = async (id: string) => {
   });
 
   if (!creditPackage) {
-    throw new AppError(httpStatus.NOT_FOUND, 'AI Credit Package not found');
+    throw new AppError(httpStatus.NOT_FOUND, "AI Credit Package not found");
   }
 
   return creditPackage;
@@ -120,6 +144,9 @@ const getAiCreditPackageById = async (id: string) => {
 //=====================Get All AI Credit Packages=====================
 const getAllAiCreditPackages = async () => {
   const packages = await prisma.aiCreditPackage.findMany({
+    where: {
+      isDeleted: false,
+    },
     select: {
       id: true,
       name: true,
@@ -130,7 +157,7 @@ const getAllAiCreditPackages = async () => {
       updatedAt: true,
     },
     orderBy: {
-      createdAt: 'desc',
+      createdAt: "desc",
     },
   });
 

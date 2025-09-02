@@ -9,10 +9,18 @@ import auth, { requireAdmin } from '../../middlewares/auth';
 
 const router = express.Router();
 
-//=====================Get All Breeze Wallet Packages (Public)=====================
+//=====================Get All Breeze Wallet Packages (Admin Only)=====================
 router.get(
   '/packages',
+  auth,
+  requireAdmin,
   BreezeWalletController.getAllBreezeWalletPackages
+);
+
+//=====================Get All Breeze Wallet Packages (Public)=====================
+router.get(
+  '/packages/public',
+  BreezeWalletController.getAllActiveBreezeWalletPackages
 );
 
 //=====================Get Breeze Wallet Package by ID (Public)=====================
@@ -37,6 +45,14 @@ router.patch(
   requireAdmin,
   validateRequest(updateBreezeWalletPackageZodSchema),
   BreezeWalletController.updateBreezeWalletPackage
+);
+
+//=====================Reactivate Breeze Wallet Package (Admin Only)=====================
+router.patch(
+  '/packages/:id/reactivate',
+  auth,
+  requireAdmin,
+  BreezeWalletController.reactivateBreezeWalletPackage
 );
 
 //=====================Delete Breeze Wallet Package (Admin Only)=====================

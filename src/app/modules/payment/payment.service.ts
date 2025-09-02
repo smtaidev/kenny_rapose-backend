@@ -3,6 +3,7 @@ import prisma from '../../utils/prisma';
 import { stripe } from '../../lib/stripe';
 import { ICreateCheckoutSession, ICheckoutSessionResponse, IPaymentWebhook } from '../../interface/payment.interface';
 import AppError from '../../errors/AppError';
+import { UserActivityService } from '../UserActivity/userActivity.service';
 
 const createCheckoutSession = async (
   userId: string,
@@ -223,6 +224,20 @@ const handlePaymentSuccess = async (session: any): Promise<void> => {
           },
         },
       });
+
+      // Create user activity record
+      await UserActivityService.createUserActivity({
+        userId,
+        type: 'AI_CREDIT_PURCHASE',
+        title: 'AI Credit Package Booked',
+        message: `AI Credit Package (${credits} credits) booked successfully`,
+        metadata: {
+          packageId,
+          credits,
+          amount: parseFloat(session.metadata.amount),
+          paymentId: session.payment_intent,
+        },
+      });
     } else if (packageType === 'breeze-wallet') {
       // Update breeze wallet purchase status
       await prisma.breezeWalletPurchase.updateMany({
@@ -243,6 +258,19 @@ const handlePaymentSuccess = async (session: any): Promise<void> => {
           breezeWalletBalance: {
             increment: parseFloat(amount),
           },
+        },
+      });
+
+      // Create user activity record
+      await UserActivityService.createUserActivity({
+        userId,
+        type: 'WALLET_TOPUP',
+        title: 'Wallet Topup Successful',
+        message: `Wallet Topup ($${amount}) added successfully`,
+        metadata: {
+          packageId,
+          amount,
+          paymentId: session.payment_intent,
         },
       });
     }

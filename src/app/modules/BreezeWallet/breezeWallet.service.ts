@@ -1,10 +1,15 @@
-import prisma from '../../utils/prisma';
-import AppError from '../../errors/AppError';
-import httpStatus from 'http-status';
-import { ICreateBreezeWalletPackage, IUpdateBreezeWalletPackage } from '../../interface/breezeWallet.interface';
+import prisma from "../../utils/prisma";
+import AppError from "../../errors/AppError";
+import httpStatus from "http-status";
+import {
+  ICreateBreezeWalletPackage,
+  IUpdateBreezeWalletPackage,
+} from "../../interface/breezeWallet.interface";
 
 //=====================Create Breeze Wallet Package=====================
-const createBreezeWalletPackage = async (packageData: ICreateBreezeWalletPackage) => {
+const createBreezeWalletPackage = async (
+  packageData: ICreateBreezeWalletPackage
+) => {
   // Check if package with same name already exists
   const existingPackage = await prisma.breezeWalletPackage.findFirst({
     where: {
@@ -13,7 +18,10 @@ const createBreezeWalletPackage = async (packageData: ICreateBreezeWalletPackage
   });
 
   if (existingPackage) {
-    throw new AppError(httpStatus.CONFLICT, 'Package with this name already exists');
+    throw new AppError(
+      httpStatus.CONFLICT,
+      "Package with this name already exists"
+    );
   }
 
   // Create new package
@@ -34,14 +42,17 @@ const createBreezeWalletPackage = async (packageData: ICreateBreezeWalletPackage
 };
 
 //=====================Update Breeze Wallet Package=====================
-const updateBreezeWalletPackage = async (id: string, updateData: IUpdateBreezeWalletPackage) => {
+const updateBreezeWalletPackage = async (
+  id: string,
+  updateData: IUpdateBreezeWalletPackage
+) => {
   // Check if package exists
   const existingPackage = await prisma.breezeWalletPackage.findUnique({
     where: { id },
   });
 
   if (!existingPackage) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Breeze Wallet Package not found');
+    throw new AppError(httpStatus.NOT_FOUND, "Breeze Wallet Package not found");
   }
 
   // If name is being updated, check for duplicates
@@ -54,7 +65,10 @@ const updateBreezeWalletPackage = async (id: string, updateData: IUpdateBreezeWa
     });
 
     if (duplicatePackage) {
-      throw new AppError(httpStatus.CONFLICT, 'Package with this name already exists');
+      throw new AppError(
+        httpStatus.CONFLICT,
+        "Package with this name already exists"
+      );
     }
   }
 
@@ -84,15 +98,42 @@ const deleteBreezeWalletPackage = async (id: string) => {
   });
 
   if (!existingPackage) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Breeze Wallet Package not found');
+    throw new AppError(httpStatus.NOT_FOUND, "Breeze Wallet Package not found");
   }
 
-  // Permanently delete the package
-  await prisma.breezeWalletPackage.delete({
+  // Soft delete the package
+  await prisma.breezeWalletPackage.update({
+    where: { id },
+    data: {
+      status: "INACTIVE",
+      isDeleted: true,
+    },
+  });
+
+  return { message: "Breeze Wallet Package deleted successfully" };
+};
+
+//=====================Reactivate Breeze Wallet Package=====================
+const reactivateBreezeWalletPackage = async (id: string) => {
+  // Check if package exists
+  const existingPackage = await prisma.breezeWalletPackage.findUnique({
     where: { id },
   });
 
-  return { message: 'Breeze Wallet Package deleted successfully' };
+  if (!existingPackage) {
+    throw new AppError(httpStatus.NOT_FOUND, "Breeze Wallet Package not found");
+  }
+
+  // Reactivate the package
+  await prisma.breezeWalletPackage.update({
+    where: { id },
+    data: {
+      status: "ACTIVE",
+      isDeleted: false,
+    },
+  });
+
+  return { message: "Breeze Wallet Package reactivated successfully" };
 };
 
 //=====================Get Breeze Wallet Package by ID=====================
@@ -111,13 +152,13 @@ const getBreezeWalletPackageById = async (id: string) => {
   });
 
   if (!creditPackage) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Breeze Wallet Package not found');
+    throw new AppError(httpStatus.NOT_FOUND, "Breeze Wallet Package not found");
   }
 
   return creditPackage;
 };
 
-//=====================Get All Breeze Wallet Packages=====================
+//=====================Get All Breeze Wallet Packages (Admin Only)=====================
 const getAllBreezeWalletPackages = async () => {
   const packages = await prisma.breezeWalletPackage.findMany({
     select: {
@@ -130,13 +171,29 @@ const getAllBreezeWalletPackages = async () => {
       updatedAt: true,
     },
     orderBy: {
-      createdAt: 'desc',
+      createdAt: "desc",
     },
   });
 
   return packages;
 };
 
+//=====================Get All Breeze Wallet Packages (Public)=====================
+const getAllActiveBreezeWalletPackages = async () => {
+  const packages = await prisma.breezeWalletPackage.findMany({
+    where: { status: "ACTIVE" },
+    select: {
+      id: true,
+      name: true,
+      amount: true,
+      price: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+  return packages;
+};
 //=====================Get User's Breeze Wallet Balance=====================
 const getWalletBalance = async (userId: string) => {
   const user = await prisma.user.findUnique({
@@ -152,7 +209,7 @@ const getWalletBalance = async (userId: string) => {
   });
 
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
   }
 
   return user;
@@ -162,7 +219,9 @@ export const BreezeWalletService = {
   createBreezeWalletPackage,
   updateBreezeWalletPackage,
   deleteBreezeWalletPackage,
+  reactivateBreezeWalletPackage,
   getBreezeWalletPackageById,
   getAllBreezeWalletPackages,
+  getAllActiveBreezeWalletPackages,
   getWalletBalance,
 };

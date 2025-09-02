@@ -85,3 +85,22 @@ export type IUserResponse = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export interface IUserActivity {
+  id: string;
+  userId: string;
+  type: 'AI_CREDIT_PURCHASE' | 'WALLET_TOPUP' | 'TOUR_BOOKING' | 'PAYMENT_SUCCESS' | 'PAYMENT_FAILED' | 'LOGIN' | 'PROFILE_UPDATE';
+  title: string;
+  message: string;
+  metadata?: any;
+  isRead: boolean;
+  createdAt: Date;
+}
+
+export interface ICreateUserActivity {
+  userId: string;
+  type: 'AI_CREDIT_PURCHASE' | 'WALLET_TOPUP' | 'TOUR_BOOKING' | 'PAYMENT_SUCCESS' | 'PAYMENT_FAILED' | 'LOGIN' | 'PROFILE_UPDATE';
+  title: string;
+  message: string;
+  metadata?: any;
+}
