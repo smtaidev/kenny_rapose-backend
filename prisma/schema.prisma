@@ -246,6 +246,7 @@ model UserActivity {
   message     String   // "Starter Pack (50 credits) booked successfully"
   metadata    Json?    // Store additional data like package details
   isRead      Boolean  @default(false)
+  isDeleted   Boolean  @default(false) // Soft delete flag
   createdAt   DateTime @default(now())
   
   // Relations

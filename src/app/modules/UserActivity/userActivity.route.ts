@@ -1,6 +1,6 @@
 import express from 'express';
 import { UserActivityController } from './userActivity.controller';
-import auth from '../../middlewares/auth';
+import auth, { requireAdmin } from '../../middlewares/auth';
 
 const router = express.Router();
 
@@ -37,6 +37,24 @@ router.delete(
   '/:id',
   auth,
   UserActivityController.deleteUserActivity
+);
+
+//=====================Admin Routes=====================
+
+//=====================Admin: Get All User Activities (Including Deleted)=====================
+router.get(
+  '/admin/all-activities',
+  auth,
+  requireAdmin,
+  UserActivityController.getAllUserActivitiesForAdmin
+);
+
+//=====================Admin: Get All Unread Count (Including Deleted)=====================
+router.get(
+  '/admin/all-unread-count',
+  auth,
+  requireAdmin,
+  UserActivityController.getAllUnreadCountForAdmin
 );
 
 export const UserActivityRoutes = router;

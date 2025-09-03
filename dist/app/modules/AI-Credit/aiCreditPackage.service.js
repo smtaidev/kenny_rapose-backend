@@ -22,10 +22,11 @@ const createAiCreditPackage = (packageData) => __awaiter(void 0, void 0, void 0,
     const existingPackage = yield prisma_1.default.aiCreditPackage.findFirst({
         where: {
             name: packageData.name,
+            isDeleted: false,
         },
     });
     if (existingPackage) {
-        throw new AppError_1.default(http_status_1.default.CONFLICT, 'Package with this name already exists');
+        throw new AppError_1.default(http_status_1.default.CONFLICT, "Package with this name already exists");
     }
     // Create new package
     const newPackage = yield prisma_1.default.aiCreditPackage.create({
@@ -46,10 +47,13 @@ const createAiCreditPackage = (packageData) => __awaiter(void 0, void 0, void 0,
 const updateAiCreditPackage = (id, updateData) => __awaiter(void 0, void 0, void 0, function* () {
     // Check if package exists
     const existingPackage = yield prisma_1.default.aiCreditPackage.findUnique({
-        where: { id },
+        where: {
+            id,
+            isDeleted: false,
+        },
     });
     if (!existingPackage) {
-        throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'AI Credit Package not found');
+        throw new AppError_1.default(http_status_1.default.NOT_FOUND, "AI Credit Package not found");
     }
     // If name is being updated, check for duplicates
     if (updateData.name && updateData.name !== existingPackage.name) {
@@ -57,10 +61,11 @@ const updateAiCreditPackage = (id, updateData) => __awaiter(void 0, void 0, void
             where: {
                 name: updateData.name,
                 id: { not: id },
+                isDeleted: false,
             },
         });
         if (duplicatePackage) {
-            throw new AppError_1.default(http_status_1.default.CONFLICT, 'Package with this name already exists');
+            throw new AppError_1.default(http_status_1.default.CONFLICT, "Package with this name already exists");
         }
     }
     // Update package
@@ -86,18 +91,25 @@ const deleteAiCreditPackage = (id) => __awaiter(void 0, void 0, void 0, function
         where: { id },
     });
     if (!existingPackage) {
-        throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'AI Credit Package not found');
+        throw new AppError_1.default(http_status_1.default.NOT_FOUND, "AI Credit Package not found");
     }
-    // Permanently delete the package
-    yield prisma_1.default.aiCreditPackage.delete({
+    // Soft delete the package
+    yield prisma_1.default.aiCreditPackage.update({
         where: { id },
+        data: {
+            status: "INACTIVE",
+            isDeleted: true,
+        },
     });
-    return { message: 'AI Credit Package deleted successfully' };
+    return { message: "AI Credit Package deleted successfully" };
 });
 //=====================Get AI Credit Package by ID=====================
 const getAiCreditPackageById = (id) => __awaiter(void 0, void 0, void 0, function* () {
     const creditPackage = yield prisma_1.default.aiCreditPackage.findUnique({
-        where: { id },
+        where: {
+            id,
+            isDeleted: false,
+        },
         select: {
             id: true,
             name: true,
@@ -109,13 +121,16 @@ const getAiCreditPackageById = (id) => __awaiter(void 0, void 0, void 0, functio
         },
     });
     if (!creditPackage) {
-        throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'AI Credit Package not found');
+        throw new AppError_1.default(http_status_1.default.NOT_FOUND, "AI Credit Package not found");
     }
     return creditPackage;
 });
 //=====================Get All AI Credit Packages=====================
 const getAllAiCreditPackages = () => __awaiter(void 0, void 0, void 0, function* () {
     const packages = yield prisma_1.default.aiCreditPackage.findMany({
+        where: {
+            isDeleted: false,
+        },
         select: {
             id: true,
             name: true,
@@ -126,7 +141,7 @@ const getAllAiCreditPackages = () => __awaiter(void 0, void 0, void 0, function*
             updatedAt: true,
         },
         orderBy: {
-            createdAt: 'desc',
+            createdAt: "desc",
         },
     });
     return packages;
