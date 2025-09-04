@@ -1,8 +1,13 @@
 export interface ICreateCheckoutSession {
   packageId: string;
-  packageType: 'ai-credit' | 'breeze-wallet'; // New field to distinguish package types
+  packageType: 'ai-credit' | 'breeze-wallet' | 'tour'; // New field to distinguish package types
   successUrl: string;
   cancelUrl: string;
+  amount?: number;
+  adults?: number;
+  children?: number;
+  infants?: number;
+  travelDate?: string;
 }
 
 export interface ICheckoutSessionResponse {

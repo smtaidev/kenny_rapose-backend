@@ -6,6 +6,7 @@ import { TourPackageRoutes } from "../modules/TourPackage/tourPackage.route";
 import { BreezeWalletRoutes } from "../modules/BreezeWallet/breezeWallet.route";
 import { paymentRouter } from "../modules/payment/payment.routes";
 import { UserActivityRoutes } from "../modules/UserActivity/userActivity.route";
+import { TourBookingRoutes } from "../modules/TourBooking/tourBooking.route";
 
 const router: Router = express.Router();
 
@@ -37,6 +38,10 @@ const moduleRoutes = [
     {
         path: '/user-activities',
         route: UserActivityRoutes,
+    },
+    {
+        path: '/tour-bookings',
+        route: TourBookingRoutes,
     }
 ];
 

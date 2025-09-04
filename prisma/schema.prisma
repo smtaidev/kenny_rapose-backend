@@ -53,6 +53,7 @@ model User {
   payments Payment[]
   creditPurchases CreditPurchase[]
   breezeWalletPurchases BreezeWalletPurchase[]
+  tourBookings TourBooking[]
   userActivities UserActivity[]
 
   @@map("users")
@@ -99,6 +100,7 @@ model TourPackage {
   star              Float  // Rating (e.g., 4.5)
   packagePriceAdult Float  // Adult package price
   packagePriceChild Float  // Child package price
+  packagePriceInfant Float @default(0) // Infant package price
   packageCategory   String // Package category (e.g., "Adventure", "Cultural", "Relaxation")
   ageRangeFrom      Int    // Minimum age
   ageRangeTo        Int    // Maximum age
@@ -126,6 +128,9 @@ model TourPackage {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   deletedAt         DateTime? // Soft delete
+
+  // Relations
+  tourBookings TourBooking[]
 
   @@map("tour_packages")
 }
@@ -199,6 +204,31 @@ model BreezeWalletPurchase {
   @@map("breeze_wallet_purchases")
 }
 
+// Tour booking tracking
+model TourBooking {
+  id            String @id @default(uuid())
+  userId        String
+  paymentId     String @unique // One-to-one relation with Payment
+  tourPackageId String
+  adults        Int    @default(0)
+  children      Int    @default(0)
+  infants       Int    @default(0)
+  totalAmount   Float
+  status        BookingStatus @default(PENDING)
+  bookingDate   DateTime @default(now())
+  travelDate    DateTime?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  tourPackage TourPackage @relation(fields: [tourPackageId], references: [id])
+
+  @@map("tour_bookings")
+}
+
 // Payment tracking model
 model Payment {
   id            String @id @default(uuid())
@@ -217,6 +247,7 @@ model Payment {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   creditPurchase CreditPurchase?
   breezeWalletPurchase BreezeWalletPurchase?
+  tourBooking TourBooking?
 
   @@map("payments")
 }
@@ -234,6 +265,15 @@ enum CreditPurchaseStatus {
   PENDING
   COMPLETED
   FAILED
+  REFUNDED
+}
+
+// Tour booking status enum
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
   REFUNDED
 }
 

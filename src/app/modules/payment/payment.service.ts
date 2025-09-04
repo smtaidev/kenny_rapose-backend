@@ -61,8 +61,22 @@ const createCheckoutSession = async (
     packageName = walletPackage.name;
     packageDescription = `$${walletPackage.amount} Wallet Credit`;
     packageAmount = walletPackage.price;
+  } else if (packageType === 'tour') {
+    // Handle tour booking
+    const tourPackage = await prisma.tourPackage.findUnique({
+      where: { id: packageId },
+    });
+
+    if (!tourPackage) {
+      throw new AppError(httpStatus.NOT_FOUND, 'Tour package not found');
+    }
+
+    packageData = tourPackage;
+    packageName = tourPackage.packageName;
+    packageDescription = `${tourPackage.packageName} - ${tourPackage.packageCategory}`;
+    packageAmount = payload.amount || 0; // Amount should be calculated from passengers
   } else {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid package type. Must be "ai-credit" or "breeze-wallet"');
+    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid package type. Must be "ai-credit", "breeze-wallet", or "tour"');
   }
 
   try {
@@ -160,6 +174,20 @@ const createCheckoutSession = async (
           status: 'PENDING',
         },
       });
+    } else if (packageType === 'tour') {
+      await prisma.tourBooking.create({
+        data: {
+          userId,
+          paymentId: payment.id,
+          tourPackageId: packageId,
+          adults: payload.adults || 0,
+          children: payload.children || 0,
+          infants: payload.infants || 0,
+          totalAmount: packageAmount,
+          travelDate: payload.travelDate ? new Date(payload.travelDate) : null,
+          status: 'PENDING',
+        },
+      });
     }
 
     return {
@@ -191,7 +219,7 @@ const handleWebhook = async (payload: IPaymentWebhook): Promise<void> => {
 
 const handlePaymentSuccess = async (session: any): Promise<void> => {
   try {
-    const { userId, packageId, packageType, credits, amount } = session.metadata;
+    const { userId, packageId, packageType, credits, amount, adults, children, infants } = session.metadata;
     
     // Update payment status
     await prisma.payment.updateMany({
@@ -271,6 +299,74 @@ const handlePaymentSuccess = async (session: any): Promise<void> => {
           packageId,
           amount,
           paymentId: session.payment_intent,
+        },
+      });
+    } else if (packageType === 'tour') {
+      // Update tour booking status
+      await prisma.tourBooking.updateMany({
+        where: {
+          payment: {
+            checkoutSessionId: session.id,
+          },
+        },
+        data: {
+          status: 'CONFIRMED',
+        },
+      });
+
+      // Get tour package details for cashback calculation
+      const tourPackage = await prisma.tourPackage.findUnique({
+        where: { id: packageId },
+        select: { breezeCredit: true, packageName: true },
+      });
+
+      // Calculate and add cashback to Breeze Wallet
+      if (tourPackage && tourPackage.breezeCredit > 0) {
+        const totalAmount = parseFloat(amount);
+        const cashbackAmount = (totalAmount * tourPackage.breezeCredit) / 100;
+        
+        // Add cashback to user's Breeze Wallet
+        await prisma.user.update({
+          where: { id: userId },
+          data: {
+            breezeWalletBalance: {
+              increment: cashbackAmount,
+            },
+          },
+        });
+
+        // Create user activity for cashback
+        await UserActivityService.createUserActivity({
+          userId,
+          type: 'WALLET_TOPUP',
+          title: 'Tour Booking Cashback',
+          message: `$${cashbackAmount.toFixed(2)} cashback added to Breeze Wallet (${tourPackage.breezeCredit}% of tour booking)`,
+          metadata: {
+            type: 'tour_cashback',
+            tourPackageId: packageId,
+            tourPackageName: tourPackage.packageName,
+            cashbackPercentage: tourPackage.breezeCredit,
+            cashbackAmount,
+            originalAmount: totalAmount,
+            paymentId: session.payment_intent,
+          },
+        });
+      }
+
+      // Create user activity record for tour booking
+      await UserActivityService.createUserActivity({
+        userId,
+        type: 'TOUR_BOOKING',
+        title: 'Tour Package Booked',
+        message: `Tour package booked successfully for ${adults} adults, ${children} children, ${infants} infants`,
+        metadata: {
+          packageId,
+          adults: parseInt(adults || '0'),
+          children: parseInt(children || '0'),
+          infants: parseInt(infants || '0'),
+          amount: parseFloat(amount),
+          paymentId: session.payment_intent,
+          cashbackEarned: tourPackage?.breezeCredit ? (parseFloat(amount) * tourPackage.breezeCredit) / 100 : 0,
         },
       });
     }

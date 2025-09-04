@@ -11,6 +11,7 @@ const tourPackage_route_1 = require("../modules/TourPackage/tourPackage.route");
 const breezeWallet_route_1 = require("../modules/BreezeWallet/breezeWallet.route");
 const payment_routes_1 = require("../modules/payment/payment.routes");
 const userActivity_route_1 = require("../modules/UserActivity/userActivity.route");
+const tourBooking_route_1 = require("../modules/TourBooking/tourBooking.route");
 const router = express_1.default.Router();
 const moduleRoutes = [
     {
@@ -40,6 +41,10 @@ const moduleRoutes = [
     {
         path: '/user-activities',
         route: userActivity_route_1.UserActivityRoutes,
+    },
+    {
+        path: '/tour-bookings',
+        route: tourBooking_route_1.TourBookingRoutes,
     }
 ];
 moduleRoutes.forEach(route => router.use(route.path, route.route));
