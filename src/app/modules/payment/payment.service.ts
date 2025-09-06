@@ -114,6 +114,12 @@ const createCheckoutSession = async (
                 packageType: packageType,
                 ...(packageType === 'ai-credit' ? { credits: packageData.credits.toString() } : {}),
                 ...(packageType === 'breeze-wallet' ? { amount: packageData.amount.toString() } : {}),
+                ...(packageType === 'tour' ? { 
+                  adults: payload.adults?.toString() || '0',
+                  children: payload.children?.toString() || '0',
+                  infants: payload.infants?.toString() || '0',
+                  travelDate: payload.travelDate || ''
+                } : {}),
               },
             },
             unit_amount: Math.round(packageAmount * 100), // Convert to cents
@@ -130,6 +136,12 @@ const createCheckoutSession = async (
         packageType: packageType,
         ...(packageType === 'ai-credit' ? { credits: packageData.credits.toString() } : {}),
         ...(packageType === 'breeze-wallet' ? { amount: packageData.amount.toString() } : {}),
+        ...(packageType === 'tour' ? { 
+          adults: payload.adults?.toString() || '0',
+          children: payload.children?.toString() || '0',
+          infants: payload.infants?.toString() || '0',
+          travelDate: payload.travelDate || ''
+        } : {}),
         amount: packageAmount.toString(),
       },
     });
@@ -138,7 +150,7 @@ const createCheckoutSession = async (
     const payment = await prisma.payment.create({
       data: {
         userId,
-        amount: packageAmount,
+        amount: packageAmount, // Store original amount
         currency: 'USD',
         status: 'PENDING',
         checkoutSessionId: session.id,
@@ -147,6 +159,13 @@ const createCheckoutSession = async (
           packageType: packageType,
           ...(packageType === 'ai-credit' ? { credits: packageData.credits, packageName: packageData.name } : {}),
           ...(packageType === 'breeze-wallet' ? { amount: packageData.amount, packageName: packageData.name } : {}),
+          ...(packageType === 'tour' ? { 
+            adults: payload.adults || 0,
+            children: payload.children || 0,
+            infants: payload.infants || 0,
+            travelDate: payload.travelDate || null,
+            packageName: packageData.packageName
+          } : {}),
         },
       },
     });
@@ -314,6 +333,7 @@ const handlePaymentSuccess = async (session: any): Promise<void> => {
         },
       });
 
+
       // Get tour package details for cashback calculation
       const tourPackage = await prisma.tourPackage.findUnique({
         where: { id: packageId },
@@ -476,6 +496,68 @@ const getPaymentById = async (paymentId: string, userId: string) => {
           },
         },
       },
+      tourBooking: {
+        include: {
+          tourPackage: {
+            select: {
+              id: true,
+              packageName: true,
+              packageCategory: true,
+              packagePriceAdult: true,
+              packagePriceChild: true,
+              packagePriceInfant: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!payment) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Payment not found');
+  }
+
+  return payment;
+};
+
+const getPaymentBySessionId = async (sessionId: string, userId: string) => {
+  const payment = await prisma.payment.findFirst({
+    where: { checkoutSessionId: sessionId, userId },
+    include: {
+      creditPurchase: {
+        include: {
+          aiCreditPackage: {
+            select: {
+              name: true,
+              credits: true,
+            },
+          },
+        },
+      },
+      breezeWalletPurchase: {
+        include: {
+          breezeWalletPackage: {
+            select: {
+              name: true,
+              amount: true,
+            },
+          },
+        },
+      },
+      tourBooking: {
+        include: {
+          tourPackage: {
+            select: {
+              id: true,
+              packageName: true,
+              packageCategory: true,
+              packagePriceAdult: true,
+              packagePriceChild: true,
+              packagePriceInfant: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -491,4 +573,5 @@ export const PaymentService = {
   handleWebhook,
   getPaymentHistory,
   getPaymentById,
+  getPaymentBySessionId,
 };

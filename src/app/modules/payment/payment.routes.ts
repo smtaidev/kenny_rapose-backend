@@ -35,4 +35,11 @@ router.get(
   PaymentController.getPaymentById
 );
 
+// Get payment details by session ID
+router.get(
+  '/session/:sessionId',
+  auth,
+  PaymentController.getPaymentBySessionId
+);
+
 export const paymentRouter = router;

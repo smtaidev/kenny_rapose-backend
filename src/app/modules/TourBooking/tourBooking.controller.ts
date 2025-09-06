@@ -5,29 +5,6 @@ import { TourBookingService } from './tourBooking.service';
 import httpStatus from 'http-status';
 import { AuthRequest } from '../../middlewares/auth';
 
-//=====================Create Tour Booking (Direct - No Payment)=====================
-const createTourBooking = catchAsync(async (req: AuthRequest, res: Response) => {
-  const userId = req.user?.userId;
-  
-  if (!userId) {
-    return sendResponse(res, {
-      statusCode: httpStatus.UNAUTHORIZED,
-      success: false,
-      message: 'User not authenticated',
-    });
-  }
-
-  // For direct booking without payment, create a dummy payment ID
-  const dummyPaymentId = `dummy-${Date.now()}`;
-  const result = await TourBookingService.createTourBooking(req.body, userId, dummyPaymentId);
-  
-  sendResponse(res, {
-    statusCode: httpStatus.CREATED,
-    success: true,
-    message: 'Tour booking created successfully',
-    data: result,
-  });
-});
 
 //=====================Get User Tour Bookings=====================
 const getUserTourBookings = catchAsync(async (req: AuthRequest, res: Response) => {
@@ -79,28 +56,6 @@ const getTourBookingById = catchAsync(async (req: AuthRequest, res: Response) =>
   });
 });
 
-//=====================Update Tour Booking=====================
-const updateTourBooking = catchAsync(async (req: AuthRequest, res: Response) => {
-  const { id } = req.params;
-  const userId = req.user?.userId;
-  
-  if (!userId) {
-    return sendResponse(res, {
-      statusCode: httpStatus.UNAUTHORIZED,
-      success: false,
-      message: 'User not authenticated',
-    });
-  }
-
-  const result = await TourBookingService.updateTourBooking(id, req.body, userId);
-  
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'Tour booking updated successfully',
-    data: result,
-  });
-});
 
 //=====================Cancel Tour Booking=====================
 const cancelTourBooking = catchAsync(async (req: AuthRequest, res: Response) => {
@@ -151,10 +106,8 @@ const calculateCashback = catchAsync(async (req: AuthRequest, res: Response) => 
 });
 
 export const TourBookingController = {
-  createTourBooking,
   getUserTourBookings,
   getTourBookingById,
-  updateTourBooking,
   cancelTourBooking,
   calculateCashback,
 };

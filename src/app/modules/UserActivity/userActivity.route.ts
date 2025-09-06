@@ -57,4 +57,28 @@ router.get(
   UserActivityController.getAllUnreadCountForAdmin
 );
 
+//=====================Admin: Mark Activity as Read=====================
+router.patch(
+  '/:id/admin-read',
+  auth,
+  requireAdmin,
+  UserActivityController.markAsReadByAdmin
+);
+
+//=====================Admin: Mark All Activities as Read=====================
+router.patch(
+  '/admin/mark-all-read',
+  auth,
+  requireAdmin,
+  UserActivityController.markAllAsReadByAdmin
+);
+
+//=====================Admin: Get Specific User All Activities (Including Deleted)=====================
+router.get(
+  '/admin/user/:userId',
+  auth,
+  requireAdmin,
+  UserActivityController.getSpecificUserAllActivitiesForAdmin
+);
+
 export const UserActivityRoutes = router;

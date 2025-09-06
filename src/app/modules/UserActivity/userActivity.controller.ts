@@ -126,17 +126,9 @@ const deleteUserActivity = catchAsync(async (req: AuthRequest, res: Response) =>
 //=====================Admin: Get All User Activities (Including Deleted)=====================
 const getAllUserActivitiesForAdmin = catchAsync(async (req: AuthRequest, res: Response) => {
   const { userId, page = 1, limit = 20 } = req.query;
-  
-  if (!userId) {
-    return sendResponse(res, {
-      statusCode: httpStatus.BAD_REQUEST,
-      success: false,
-      message: 'User ID is required',
-    });
-  }
 
   const result = await UserActivityService.getAllUserActivitiesForAdmin(
-    userId as string, 
+    userId as string | undefined, 
     Number(page), 
     Number(limit)
   );
@@ -144,7 +136,9 @@ const getAllUserActivitiesForAdmin = catchAsync(async (req: AuthRequest, res: Re
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'All user activities retrieved successfully (including deleted)',
+    message: userId 
+      ? `All activities for user ${userId} retrieved successfully (including deleted)`
+      : 'All users activities retrieved successfully (including deleted)',
     data: result,
   });
 });
@@ -152,7 +146,54 @@ const getAllUserActivitiesForAdmin = catchAsync(async (req: AuthRequest, res: Re
 //=====================Admin: Get All Unread Count (Including Deleted)=====================
 const getAllUnreadCountForAdmin = catchAsync(async (req: AuthRequest, res: Response) => {
   const { userId } = req.query;
+
+  const result = await UserActivityService.getAllUnreadCountForAdmin(userId as string | undefined);
   
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: userId 
+      ? `Unread count for user ${userId} retrieved successfully (including deleted)`
+      : 'All users unread count retrieved successfully (including deleted)',
+    data: result,
+  });
+});
+
+//=====================Admin: Mark Activity as Read=====================
+const markAsReadByAdmin = catchAsync(async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+
+  const result = await UserActivityService.markAsReadByAdmin(id);
+  
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Activity marked as read by admin',
+    data: result,
+  });
+});
+
+//=====================Admin: Mark All Activities as Read=====================
+const markAllAsReadByAdmin = catchAsync(async (req: AuthRequest, res: Response) => {
+  const { userId } = req.query;
+
+  const result = await UserActivityService.markAllAsReadByAdmin(userId as string | undefined);
+  
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: userId 
+      ? `All activities for user ${userId} marked as read by admin`
+      : 'All activities marked as read by admin',
+    data: result,
+  });
+});
+
+//=====================Admin: Get Specific User All Activities (Including Deleted)=====================
+const getSpecificUserAllActivitiesForAdmin = catchAsync(async (req: AuthRequest, res: Response) => {
+  const { userId } = req.params;
+  const { page = 1, limit = 20 } = req.query;
+
   if (!userId) {
     return sendResponse(res, {
       statusCode: httpStatus.BAD_REQUEST,
@@ -161,12 +202,16 @@ const getAllUnreadCountForAdmin = catchAsync(async (req: AuthRequest, res: Respo
     });
   }
 
-  const result = await UserActivityService.getAllUnreadCountForAdmin(userId as string);
+  const result = await UserActivityService.getSpecificUserAllActivitiesForAdmin(
+    userId, 
+    Number(page), 
+    Number(limit)
+  );
   
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'All unread count retrieved successfully (including deleted)',
+    message: `All activities for user ${userId} retrieved successfully (including deleted)`,
     data: result,
   });
 });
@@ -180,4 +225,7 @@ export const UserActivityController = {
   // Admin functions
   getAllUserActivitiesForAdmin,
   getAllUnreadCountForAdmin,
+  markAsReadByAdmin,
+  markAllAsReadByAdmin,
+  getSpecificUserAllActivitiesForAdmin,
 };

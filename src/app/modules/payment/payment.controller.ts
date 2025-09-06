@@ -69,9 +69,24 @@ const getPaymentById = catchAsync(async (req: AuthRequest, res: Response) => {
   });
 });
 
+const getPaymentBySessionId = catchAsync(async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.userId;
+  const { sessionId } = req.params;
+  
+  const result = await PaymentService.getPaymentBySessionId(sessionId, userId!);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'Payment details retrieved successfully',
+    data: result,
+  });
+});
+
 export const PaymentController = {
   createCheckoutSession,
   handleWebhook,
   getPaymentHistory,
   getPaymentById,
+  getPaymentBySessionId,
 };
