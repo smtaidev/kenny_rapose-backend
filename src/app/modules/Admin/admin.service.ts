@@ -386,9 +386,142 @@ const getDashboardStats = async () => {
   };
 };
 
+//=====================Get Tour Package Analytics=====================
+const getTourPackageAnalytics = async (page = 1, limit = 10) => {
+  const skip = (page - 1) * limit;
+  
+  const [tourPackages, totalCount] = await Promise.all([
+    prisma.tourPackage.findMany({
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      // Remove the deletedAt filter to show all packages including deleted ones
+      include: {
+        tourBookings: {
+          include: {
+            payment: true,
+          },
+        },
+      },
+    }),
+    prisma.tourPackage.count()
+  ]);
+
+  const analytics = tourPackages.map((tourPackage) => {
+    const bookings = tourPackage.tourBookings;
+    
+    // Calculate total bookings by status
+    const statusCounts = {
+      confirmed: bookings.filter(b => b.status === 'CONFIRMED').length,
+      pending: bookings.filter(b => b.status === 'PENDING').length,
+      cancelled: bookings.filter(b => b.status === 'CANCELLED').length,
+      completed: bookings.filter(b => b.status === 'COMPLETED').length,
+      refunded: bookings.filter(b => b.status === 'REFUNDED').length,
+    };
+
+    // Calculate total people booked
+    const totalBookings = {
+      adults: bookings.reduce((sum, b) => sum + b.adults, 0),
+      children: bookings.reduce((sum, b) => sum + b.children, 0),
+      infants: bookings.reduce((sum, b) => sum + b.infants, 0),
+    };
+
+    // Calculate earnings
+    const confirmedBookings = bookings.filter(b => b.status === 'CONFIRMED');
+    const pendingBookings = bookings.filter(b => b.status === 'PENDING');
+    
+    const totalEarnings = confirmedBookings.reduce((sum, b) => {
+      return sum + (b.payment?.status === 'SUCCEEDED' ? b.totalAmount : 0);
+    }, 0);
+
+    const pendingAmount = pendingBookings.reduce((sum, b) => {
+      return sum + (b.payment?.status === 'PENDING' ? b.totalAmount : 0);
+    }, 0);
+
+    // Calculate potential revenue based on pricing
+    const totalPotentialRevenue = {
+      adults: totalBookings.adults * tourPackage.packagePriceAdult,
+      children: totalBookings.children * tourPackage.packagePriceChild,
+      infants: totalBookings.infants * tourPackage.packagePriceInfant,
+    };
+
+    return {
+      packageId: tourPackage.id,
+      title: tourPackage.packageName,
+      image: tourPackage.photos && tourPackage.photos.length > 0 ? tourPackage.photos[0] : null,
+      currentStatus: tourPackage.status, // ACTIVE or INACTIVE
+      isDeleted: tourPackage.deletedAt !== null, // Show if package is deleted
+      deletedAt: tourPackage.deletedAt, // Show deletion date if deleted
+      pricing: {
+        adult: tourPackage.packagePriceAdult,
+        child: tourPackage.packagePriceChild,
+        infant: tourPackage.packagePriceInfant,
+      },
+      totalEarnings: totalEarnings,
+      pendingAmount: pendingAmount,
+      totalBookings: {
+        adults: totalBookings.adults,
+        children: totalBookings.children,
+        infants: totalBookings.infants,
+      },
+      packageDuration: {
+        startDate: tourPackage.startDay,
+        endDate: tourPackage.endDay,
+      },
+      status: {
+        confirmed: statusCounts.confirmed,
+        pending: statusCounts.pending,
+        cancelled: statusCounts.cancelled,
+      },
+    };
+  });
+
+  // Determine project current status based on business logic
+  const activePackages = analytics.filter(pkg => pkg.currentStatus === 'ACTIVE' && !pkg.isDeleted).length;
+  const deletedPackages = analytics.filter(pkg => pkg.isDeleted).length;
+  const totalBookings = analytics.reduce((sum, pkg) => sum + pkg.totalBookings.adults + pkg.totalBookings.children + pkg.totalBookings.infants, 0);
+  const totalEarnings = analytics.reduce((sum, pkg) => sum + pkg.totalEarnings, 0);
+  
+  let projectCurrentStatus = "ACTIVE";
+  
+  // Business logic to determine project status
+  if (analytics.length === 0) {
+    projectCurrentStatus = "INACTIVE"; // No packages available
+  } else if (activePackages === 0) {
+    projectCurrentStatus = "INACTIVE"; // No active packages
+  } else if (totalBookings === 0 && totalEarnings === 0) {
+    projectCurrentStatus = "PENDING"; // Project exists but no bookings yet
+  } else if (activePackages < (analytics.length - deletedPackages) * 0.5) {
+    projectCurrentStatus = "LIMITED"; // Less than 50% of non-deleted packages are active
+  }
+
+  // Calculate overall summary
+  const summary = {
+    totalPackages: analytics.length,
+    totalBookings: totalBookings,
+    totalEarnings: totalEarnings,
+    totalPendingAmount: analytics.reduce((sum, pkg) => sum + pkg.pendingAmount, 0),
+    projectCurrentStatus: projectCurrentStatus,
+  };
+
+  return {
+    summary,
+    packages: analytics,
+    pagination: {
+      page,
+      limit,
+      total: totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      hasNextPage: page < Math.ceil(totalCount / limit),
+      hasPrevPage: page > 1,
+    },
+  };
+};
+
 export const AdminService = {
   getDashboardStats,
   getUsersByCountry,
   getTourBookingsPerMonth,
   getAllBookedTourPackages,
+  getTourPackageAnalytics,
 };

@@ -14,8 +14,16 @@ export type AuthRequest = Request & {
 };
 
 const auth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  // Get token from cookie (website standard)
-  const token = req.cookies.accessToken;
+  // Get token from cookie (website standard) or Authorization header (API standard)
+  let token = req.cookies.accessToken;
+  
+  // If no cookie token, check Authorization header for Bearer token
+  if (!token) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    }
+  }
   
   if (!token) {
     res.status(401).json({ message: 'Unauthorized - No token provided' });

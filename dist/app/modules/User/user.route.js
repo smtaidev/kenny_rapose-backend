@@ -54,8 +54,6 @@ router.get('/:id', auth_1.default, auth_2.requireAdmin, user_controller_1.UserCo
 router.patch('/:id/role', auth_1.default, auth_1.requireSuperAdmin, (0, validateRequest_1.default)(user_validation_1.updateUserRoleZodSchema), user_controller_1.UserController.updateUserRole);
 //==============Update Profile==============
 router.patch('/profile', auth_1.default, (0, validateRequest_1.default)(user_validation_1.updateUserProfileZodSchema), user_controller_1.UserController.updateUserProfile);
-//===============Verify User Profile===============
-router.patch('/verify-profile', auth_1.default, user_controller_1.UserController.verifyUserProfile);
 //===============Change Password==============
 router.post('/change-password', auth_1.default, // Add authentication middleware
 (0, validateRequest_1.default)(user_validation_1.changePasswordZodSchema), user_controller_1.UserController.changePassword);

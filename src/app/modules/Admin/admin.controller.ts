@@ -58,9 +58,27 @@ const getAllBookedTourPackages = catchAsync(async (req: AuthRequest, res: Respon
   });
 });
 
+//=====================Get Tour Package Analytics=====================
+const getTourPackageAnalytics = catchAsync(async (req: AuthRequest, res: Response) => {
+  const { page = 1, limit = 10 } = req.query;
+  
+  const result = await AdminService.getTourPackageAnalytics(
+    Number(page), 
+    Number(limit)
+  );
+  
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Tour package analytics retrieved successfully',
+    data: result,
+  });
+});
+
 export const AdminController = {
   getDashboardStats,
   getUsersByCountry,
   getTourBookingsPerMonth,
   getAllBookedTourPackages,
+  getTourPackageAnalytics,
 };

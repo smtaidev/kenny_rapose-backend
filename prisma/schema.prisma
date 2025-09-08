@@ -21,6 +21,7 @@ model User {
   zip                   String?
   isEmailVerified       Boolean                @default(false)
   isActive              Boolean                @default(true)
+  isDeleted             Boolean                @default(false)
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   deletedAt             DateTime?
@@ -202,6 +203,21 @@ model UserActivity {
   @@map("user_activities")
 }
 
+model UserAssistance {
+  id          String                @id @default(uuid())
+  firstName   String
+  lastName    String
+  phoneNumber String
+  email       String
+  concern     String
+  status      UserAssistanceStatus  @default(PENDING)
+  response    String?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@map("user_assistance")
+}
+
 enum UserRole {
   USER
   ADMIN
@@ -259,4 +275,11 @@ enum ActivityType {
   PAYMENT_FAILED
   LOGIN
   PROFILE_UPDATE
+}
+
+enum UserAssistanceStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
 }

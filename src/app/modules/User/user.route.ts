@@ -34,8 +34,6 @@ router.patch(
   UserController.updateUserProfile,
 );
 
-//===============Verify User Profile===============
-router.patch('/verify-profile', auth, UserController.verifyUserProfile);
 
 //===============Change Password==============
 router.post(

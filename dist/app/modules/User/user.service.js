@@ -85,33 +85,6 @@ const updateUserProfile = (email, updateData) => __awaiter(void 0, void 0, void 
     });
     return updatedUser;
 });
-//=====================Verify User Profile=====================
-const verifyUserProfile = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    const user = yield prisma_1.default.user.findUnique({
-        where: { id: userId, isActive: true },
-    });
-    if (!user) {
-        throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'User not found');
-    }
-    const updatedUser = yield prisma_1.default.user.update({
-        where: { id: userId },
-        data: { isEmailVerified: true },
-        select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            role: true,
-            isActive: true,
-            aiCredits: true,
-            country: true,
-            isEmailVerified: true,
-            createdAt: true,
-            updatedAt: true,
-        },
-    });
-    return updatedUser;
-});
 //=====================Change Password=====================
 const changePassword = (email, oldPassword, newPassword) => __awaiter(void 0, void 0, void 0, function* () {
     const user = yield prisma_1.default.user.findUnique({
@@ -267,33 +240,60 @@ const softDeleteUser = (email) => __awaiter(void 0, void 0, void 0, function* ()
     return { message: 'User soft deleted successfully' };
 });
 //=====================Get All Users (Admin Only)=====================
-const getAllUsers = () => __awaiter(void 0, void 0, void 0, function* () {
-    const users = yield prisma_1.default.user.findMany({
-        where: { isActive: true }, // Only active users
-        select: {
-            id: true,
-            travelerNumber: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            role: true,
-            isActive: true,
-            aiCredits: true,
-            gender: true,
-            dateOfBirth: true,
-            phone: true,
-            address: true,
-            city: true,
-            state: true,
-            zip: true,
-            country: true,
-            isEmailVerified: true,
-            createdAt: true,
-            updatedAt: true,
+const getAllUsers = (...args_1) => __awaiter(void 0, [...args_1], void 0, function* (page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+    const [users, totalCount] = yield Promise.all([
+        prisma_1.default.user.findMany({
+            skip,
+            take: limit,
+            // Remove isActive filter to show all users including inactive ones
+            select: {
+                id: true,
+                travelerNumber: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                role: true,
+                isActive: true,
+                deletedAt: true,
+                aiCredits: true,
+                breezeWalletBalance: true,
+                gender: true,
+                dateOfBirth: true,
+                phone: true,
+                address: true,
+                city: true,
+                state: true,
+                zip: true,
+                country: true,
+                lastLoginAt: true,
+                createdAt: true,
+                updatedAt: true,
+            },
+            orderBy: { createdAt: 'desc' }, // Newest first
+        }),
+        prisma_1.default.user.count()
+    ]);
+    // Add computed status field
+    const usersWithStatus = users.map(user => (Object.assign(Object.assign({}, user), { status: {
+            isActive: user.isActive,
+            isDeleted: user.deletedAt !== null,
+            deletedAt: user.deletedAt,
+        }, wallet: {
+            breezeWalletBalance: user.breezeWalletBalance,
+            aiCredits: user.aiCredits,
+        } })));
+    return {
+        users: usersWithStatus,
+        pagination: {
+            page,
+            limit,
+            total: totalCount,
+            totalPages: Math.ceil(totalCount / limit),
+            hasNextPage: page < Math.ceil(totalCount / limit),
+            hasPrevPage: page > 1,
         },
-        orderBy: { createdAt: 'desc' }, // Newest first
-    });
-    return users;
+    };
 });
 //=====================Get User By ID (Admin Only)=====================
 const getUserById = (userId) => __awaiter(void 0, void 0, void 0, function* () {
@@ -368,7 +368,6 @@ const updateUserRole = (userId, newRole) => __awaiter(void 0, void 0, void 0, fu
 exports.UserService = {
     getUserProfile,
     updateUserProfile,
-    verifyUserProfile,
     changePassword,
     requestResetPasswordOtp,
     verifyResetPasswordOtp,

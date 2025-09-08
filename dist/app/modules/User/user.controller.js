@@ -45,17 +45,6 @@ const updateUserProfile = (0, catchAsync_1.default)((req, res) => __awaiter(void
         data: result,
     });
 }));
-//=====================Verify User Profile ===================
-const verifyUserProfile = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { userId } = req.user;
-    const result = yield user_service_1.UserService.verifyUserProfile(userId);
-    (0, sendResponse_1.default)(res, {
-        statusCode: http_status_1.default.OK,
-        success: true,
-        message: 'User Profile verified successfully',
-        data: result,
-    });
-}));
 //=======================Change Password=======================
 const changePassword = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
@@ -137,7 +126,8 @@ const getUserById = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
 }));
 //=====================Get All Users (Admin Only)=====================
 const getAllUsers = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield user_service_1.UserService.getAllUsers();
+    const { page = 1, limit = 20 } = req.query;
+    const result = yield user_service_1.UserService.getAllUsers(Number(page), Number(limit));
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,
@@ -160,7 +150,6 @@ const updateUserRole = (0, catchAsync_1.default)((req, res) => __awaiter(void 0,
 exports.UserController = {
     getUserProfile,
     updateUserProfile,
-    verifyUserProfile,
     changePassword,
     requestResetPasswordOtp,
     verifyResetPasswordOtp,

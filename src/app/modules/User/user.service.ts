@@ -79,36 +79,6 @@ const updateUserProfile = async (email: string, updateData: IUpdateUser) => {
   return updatedUser;
 };
 
-//=====================Verify User Profile=====================
-const verifyUserProfile = async (userId: string) => {
-  const user = await prisma.user.findUnique({
-    where: { id: userId, isActive: true },
-  });
-
-  if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
-  }
-
-  const updatedUser = await prisma.user.update({
-    where: { id: userId },
-    data: { isEmailVerified: true },
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      email: true,
-      role: true,
-      isActive: true,
-      aiCredits: true,
-      country: true,
-      isEmailVerified: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
-
-  return updatedUser;
-};
 
 //=====================Change Password=====================
 const changePassword = async (email: string, oldPassword: string, newPassword: string) => {
@@ -300,34 +270,67 @@ const softDeleteUser = async (email: string) => {
 };
 
 //=====================Get All Users (Admin Only)=====================
-const getAllUsers = async () => {
-  const users = await prisma.user.findMany({
-    where: { isActive: true }, // Only active users
-    select: {
-      id: true,
-      travelerNumber: true,
-      firstName: true,
-      lastName: true,
-      email: true,
-      role: true,
-      isActive: true,
-      aiCredits: true,
-      gender: true,
-      dateOfBirth: true,
-      phone: true,
-      address: true,
-      city: true,
-      state: true,
-      zip: true,
-      country: true,
-      isEmailVerified: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-    orderBy: { createdAt: 'desc' }, // Newest first
-  });
+const getAllUsers = async (page = 1, limit = 20) => {
+  const skip = (page - 1) * limit;
+  
+  const [users, totalCount] = await Promise.all([
+    prisma.user.findMany({
+      skip,
+      take: limit,
+      // Remove isActive filter to show all users including inactive ones
+      select: {
+        id: true,
+        travelerNumber: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        role: true,
+        isActive: true,
+        deletedAt: true,
+        aiCredits: true,
+        breezeWalletBalance: true,
+        gender: true,
+        dateOfBirth: true,
+        phone: true,
+        address: true,
+        city: true,
+        state: true,
+        zip: true,
+        country: true,
+        lastLoginAt: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { createdAt: 'desc' }, // Newest first
+    }),
+    prisma.user.count()
+  ]);
 
-  return users;
+  // Add computed status field
+  const usersWithStatus = users.map(user => ({
+    ...user,
+    status: {
+      isActive: user.isActive,
+      isDeleted: user.deletedAt !== null,
+      deletedAt: user.deletedAt,
+    },
+    wallet: {
+      breezeWalletBalance: user.breezeWalletBalance,
+      aiCredits: user.aiCredits,
+    },
+  }));
+
+  return {
+    users: usersWithStatus,
+    pagination: {
+      page,
+      limit,
+      total: totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      hasNextPage: page < Math.ceil(totalCount / limit),
+      hasPrevPage: page > 1,
+    },
+  };
 };
 
 //=====================Get User By ID (Admin Only)=====================
@@ -411,7 +414,6 @@ const updateUserRole = async (userId: string, newRole: string) => {
 export const UserService = {
   getUserProfile,
   updateUserProfile,
-  verifyUserProfile,
   changePassword,
   requestResetPasswordOtp,
   verifyResetPasswordOtp,

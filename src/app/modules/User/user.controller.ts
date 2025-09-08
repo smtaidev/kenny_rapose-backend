@@ -37,18 +37,6 @@ const updateUserProfile = catchAsync(async (req: AuthRequest, res: Response) => 
   });
 });
 
-//=====================Verify User Profile ===================
-const verifyUserProfile = catchAsync(async (req: AuthRequest, res: Response) => {
-  const { userId } = req.user as { userId: string };
-  const result = await UserService.verifyUserProfile(userId);
-
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'User Profile verified successfully',
-    data: result,
-  });
-});
 
 //=======================Change Password=======================
 
@@ -142,9 +130,14 @@ const getUserById = catchAsync(async (req: Request, res: Response) => {
 
 //=====================Get All Users (Admin Only)=====================
 const getAllUsers = catchAsync(async (req: Request, res: Response) => {
-  const result = await UserService.getAllUsers();
+  const { page = 1, limit = 20 } = req.query;
+  
+  const result = await UserService.getAllUsers(
+    Number(page), 
+    Number(limit)
+  );
 
-  sendResponse<IUserResponse[]>(res, {
+  sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: 'All users retrieved successfully',
@@ -169,7 +162,6 @@ const updateUserRole = catchAsync(async (req: Request, res: Response) => {
 export const UserController = {
   getUserProfile,
   updateUserProfile,
-  verifyUserProfile,
   changePassword,
   requestResetPasswordOtp,
   verifyResetPasswordOtp,

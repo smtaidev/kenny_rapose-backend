@@ -38,4 +38,12 @@ router.get(
   AdminController.getAllBookedTourPackages
 );
 
+//=====================Get Tour Package Analytics=====================
+router.get(
+  '/tour-package-analytics',
+  auth,
+  requireAdmin,
+  AdminController.getTourPackageAnalytics
+);
+
 export const AdminRoutes = router;
