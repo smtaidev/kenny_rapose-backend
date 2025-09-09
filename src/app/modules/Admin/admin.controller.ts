@@ -75,10 +75,42 @@ const getTourPackageAnalytics = catchAsync(async (req: AuthRequest, res: Respons
   });
 });
 
+//=====================Get Cancel Request Statistics=====================
+const getCancelRequestStats = catchAsync(async (req: AuthRequest, res: Response) => {
+  const result = await AdminService.getCancelRequestStats();
+  
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Cancel request statistics retrieved successfully',
+    data: result,
+  });
+});
+
+//=====================Get All Cancel Requests with Details=====================
+const getAllCancelRequestsWithDetails = catchAsync(async (req: AuthRequest, res: Response) => {
+  const { page = 1, limit = 20, status } = req.query;
+  
+  const result = await AdminService.getAllCancelRequestsWithDetails(
+    Number(page), 
+    Number(limit),
+    status as string
+  );
+  
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Cancel requests with details retrieved successfully',
+    data: result,
+  });
+});
+
 export const AdminController = {
   getDashboardStats,
   getUsersByCountry,
   getTourBookingsPerMonth,
   getAllBookedTourPackages,
   getTourPackageAnalytics,
+  getCancelRequestStats,
+  getAllCancelRequestsWithDetails,
 };

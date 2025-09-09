@@ -25,6 +25,14 @@ const getUserTourBookings = async (userId: string, page = 1, limit = 20) => {
             packagePriceInfant: true,
           },
         },
+        cancelRequests: {
+          select: {
+            id: true,
+            status: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     }),
     prisma.tourBooking.count({
@@ -57,6 +65,14 @@ const getTourBookingById = async (bookingId: string, userId: string) => {
           packagePriceChild: true,
           packagePriceInfant: true,
         },
+      },
+      cancelRequests: {
+        select: {
+          id: true,
+          status: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
       },
     },
   });

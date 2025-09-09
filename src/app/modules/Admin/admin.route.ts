@@ -46,4 +46,20 @@ router.get(
   AdminController.getTourPackageAnalytics
 );
 
+//=====================Get Cancel Request Statistics=====================
+router.get(
+  '/cancel-request-stats',
+  auth,
+  requireAdmin,
+  AdminController.getCancelRequestStats
+);
+
+//=====================Get All Cancel Requests with Details=====================
+router.get(
+  '/cancel-requests',
+  auth,
+  requireAdmin,
+  AdminController.getAllCancelRequestsWithDetails
+);
+
 export const AdminRoutes = router;

@@ -518,10 +518,110 @@ const getTourPackageAnalytics = async (page = 1, limit = 10) => {
   };
 };
 
+//=====================Get Cancel Request Statistics=====================
+const getCancelRequestStats = async () => {
+  const [totalCancelRequests, pendingRequests, approvedRequests, rejectedRequests] = await Promise.all([
+    prisma.cancelRequest.count(),
+    prisma.cancelRequest.count({ where: { status: 'PENDING' } }),
+    prisma.cancelRequest.count({ where: { status: 'APPROVED' } }),
+    prisma.cancelRequest.count({ where: { status: 'REJECTED' } }),
+  ]);
+
+  // Get recent cancel requests (last 30 days)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const recentCancelRequests = await prisma.cancelRequest.count({
+    where: {
+      createdAt: {
+        gte: thirtyDaysAgo
+      }
+    }
+  });
+
+  return {
+    totalCancelRequests,
+    pendingRequests,
+    approvedRequests,
+    rejectedRequests,
+    recentCancelRequests,
+  };
+};
+
+//=====================Get All Cancel Requests with Details=====================
+const getAllCancelRequestsWithDetails = async (page = 1, limit = 20, status?: string) => {
+  const skip = (page - 1) * limit;
+  
+  const whereClause: any = {};
+  if (status) {
+    whereClause.status = status;
+  }
+
+  const [cancelRequests, totalCount] = await Promise.all([
+    prisma.cancelRequest.findMany({
+      where: whereClause,
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            country: true,
+          },
+        },
+        tourBooking: {
+          include: {
+            tourPackage: {
+              select: {
+                id: true,
+                packageName: true,
+                packageCategory: true,
+                packagePriceAdult: true,
+                packagePriceChild: true,
+                packagePriceInfant: true,
+                photos: true,
+              },
+            },
+            payment: {
+              select: {
+                id: true,
+                amount: true,
+                currency: true,
+                status: true,
+                createdAt: true,
+              },
+            },
+          },
+        },
+      },
+    }),
+    prisma.cancelRequest.count({
+      where: whereClause,
+    }),
+  ]);
+
+  return {
+    cancelRequests,
+    pagination: {
+      page,
+      limit,
+      total: totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+    },
+  };
+};
+
 export const AdminService = {
   getDashboardStats,
   getUsersByCountry,
   getTourBookingsPerMonth,
   getAllBookedTourPackages,
   getTourPackageAnalytics,
+  getCancelRequestStats,
+  getAllCancelRequestsWithDetails,
 };

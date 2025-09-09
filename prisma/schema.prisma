@@ -44,6 +44,7 @@ model User {
   payments              Payment[]
   tourBookings          TourBooking[]
   userActivities        UserActivity[]
+  cancelRequests        CancelRequest[]
 
   @@map("users")
 }
@@ -148,22 +149,24 @@ model BreezeWalletPurchase {
 }
 
 model TourBooking {
-  id            String        @id @default(uuid())
-  userId        String
-  paymentId     String        @unique
-  tourPackageId String
-  adults        Int           @default(0)
-  children      Int           @default(0)
-  infants       Int           @default(0)
-  totalAmount   Float
-  status        BookingStatus @default(PENDING)
-  bookingDate   DateTime      @default(now())
-  travelDate    DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  payment       Payment       @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  tourPackage   TourPackage   @relation(fields: [tourPackageId], references: [id])
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  String              @id @default(uuid())
+  userId              String
+  paymentId           String              @unique
+  tourPackageId       String
+  adults              Int                 @default(0)
+  children            Int                 @default(0)
+  infants             Int                 @default(0)
+  totalAmount         Float
+  status              BookingStatus       @default(PENDING)
+  cancelRequestStatus CancelRequestStatus?
+  bookingDate         DateTime            @default(now())
+  travelDate          DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  payment             Payment             @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  tourPackage         TourPackage         @relation(fields: [tourPackageId], references: [id])
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cancelRequests      CancelRequest[]
 
   @@map("tour_bookings")
 }
@@ -216,6 +219,20 @@ model UserAssistance {
   updatedAt   DateTime              @updatedAt
 
   @@map("user_assistance")
+}
+
+model CancelRequest {
+  id            String              @id @default(uuid())
+  userId        String
+  tourBookingId String
+  status        CancelRequestStatus
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tourBooking   TourBooking         @relation(fields: [tourBookingId], references: [id], onDelete: Cascade)
+  
+  @@map("cancel_requests")
 }
 
 enum UserRole {
@@ -282,4 +299,10 @@ enum UserAssistanceStatus {
   IN_PROGRESS
   RESOLVED
   CLOSED
+}
+
+enum CancelRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

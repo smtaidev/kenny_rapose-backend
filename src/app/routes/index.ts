@@ -9,6 +9,7 @@ import { UserActivityRoutes } from "../modules/UserActivity/userActivity.route";
 import { TourBookingRoutes } from "../modules/TourBooking/tourBooking.route";
 import { AdminRoutes } from "../modules/Admin/admin.route";
 import { UserAssistanceRoutes } from "../modules/UserAssistance/userAssistance.route";
+import { CancelRequestRoutes } from "../modules/CancelRequest/cancelRequest.route";
 
 const router: Router = express.Router();
 
@@ -52,6 +53,10 @@ const moduleRoutes = [
     {
         path: '/user-assistance',
         route: UserAssistanceRoutes,
+    },
+    {
+        path: '/cancel-requests',
+        route: CancelRequestRoutes,
     }
 ];
 
