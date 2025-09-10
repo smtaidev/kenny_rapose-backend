@@ -39,6 +39,8 @@ model User {
   travelerNumber        String                 @unique @default(uuid())
   breezeWalletBalance   Float                  @default(0)
   stripeCustomerId      String?
+  profilePhoto          String?
+  coverPhoto            String?
   breezeWalletPurchases BreezeWalletPurchase[]
   creditPurchases       CreditPurchase[]
   payments              Payment[]

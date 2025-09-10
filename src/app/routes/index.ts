@@ -10,6 +10,7 @@ import { TourBookingRoutes } from "../modules/TourBooking/tourBooking.route";
 import { AdminRoutes } from "../modules/Admin/admin.route";
 import { UserAssistanceRoutes } from "../modules/UserAssistance/userAssistance.route";
 import { CancelRequestRoutes } from "../modules/CancelRequest/cancelRequest.route";
+import { UploadRoutes } from "../modules/Upload/upload.route";
 
 const router: Router = express.Router();
 
@@ -57,6 +58,10 @@ const moduleRoutes = [
     {
         path: '/cancel-requests',
         route: CancelRequestRoutes,
+    },
+    {
+        path: '/upload',
+        route: UploadRoutes,
     }
 ];
 

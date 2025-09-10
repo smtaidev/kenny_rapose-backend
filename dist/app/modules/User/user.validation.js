@@ -25,6 +25,8 @@ exports.updateUserProfileZodSchema = zod_1.z.object({
             .min(1, "Zip code cannot be empty")
             .max(20, "Zip code cannot exceed 20 characters")
             .optional(),
+        profilePhoto: zod_1.z.string().url("Invalid profile photo URL").optional(),
+        coverPhoto: zod_1.z.string().url("Invalid cover photo URL").optional(),
     }),
 });
 // OTP validation schemas

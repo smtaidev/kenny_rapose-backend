@@ -5,6 +5,7 @@ import { IUpdateUser } from '../../interface/user.interface';
 import bcrypt from 'bcrypt';
 import config from '../../../config';
 import { sendOtpEmail } from '../../utils/sendEmail';
+import { deletePhotoFromS3 } from '../../utils/s3Helper';
 
 //=====================Get User Profile=====================
 const getUserProfile = async (email: string) => {
@@ -28,6 +29,8 @@ const getUserProfile = async (email: string) => {
       zip: true,
       country: true,
       isEmailVerified: true,
+      profilePhoto: true,
+      coverPhoto: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -50,6 +53,10 @@ const updateUserProfile = async (email: string, updateData: IUpdateUser) => {
     throw new AppError(httpStatus.NOT_FOUND, 'User not found');
   }
 
+  // Store old photo URLs for cleanup after successful update
+  const oldProfilePhoto = user.profilePhoto;
+  const oldCoverPhoto = user.coverPhoto;
+
   const updatedUser = await prisma.user.update({
     where: { email },
     data: updateData,
@@ -70,11 +77,34 @@ const updateUserProfile = async (email: string, updateData: IUpdateUser) => {
       state: true,
       zip: true,
       country: true,
+      profilePhoto: true,
+      coverPhoto: true,
       isEmailVerified: true,
       createdAt: true,
       updatedAt: true,
     },
   });
+
+  // Delete old photos from S3 AFTER successful profile update
+  if (updateData.profilePhoto && updateData.profilePhoto !== oldProfilePhoto && oldProfilePhoto) {
+    try {
+      await deletePhotoFromS3(oldProfilePhoto);
+      console.log('Successfully deleted old profile photo:', oldProfilePhoto);
+    } catch (error) {
+      console.error('Failed to delete old profile photo:', error);
+      // Don't throw error - profile update was successful
+    }
+  }
+  
+  if (updateData.coverPhoto && updateData.coverPhoto !== oldCoverPhoto && oldCoverPhoto) {
+    try {
+      await deletePhotoFromS3(oldCoverPhoto);
+      console.log('Successfully deleted old cover photo:', oldCoverPhoto);
+    } catch (error) {
+      console.error('Failed to delete old cover photo:', error);
+      // Don't throw error - profile update was successful
+    }
+  }
 
   return updatedUser;
 };
@@ -355,6 +385,8 @@ const getUserById = async (userId: string) => {
       zip: true,
       country: true,
       isEmailVerified: true,
+      profilePhoto: true,
+      coverPhoto: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -403,6 +435,8 @@ const updateUserRole = async (userId: string, newRole: string) => {
       zip: true,
       country: true,
       isEmailVerified: true,
+      profilePhoto: true,
+      coverPhoto: true,
       createdAt: true,
       updatedAt: true,
     },

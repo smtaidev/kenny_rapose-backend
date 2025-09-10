@@ -25,6 +25,8 @@ export type IUser = {
   passwordResetToken?: string;
   passwordResetExpires?: Date;
   lastLoginAt?: Date;
+  profilePhoto?: string;
+  coverPhoto?: string;
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date;
@@ -62,6 +64,8 @@ export type IUpdateUser = {
   state?: string;
   zip?: string;
   country?: string;
+  profilePhoto?: string;
+  coverPhoto?: string;
 };
 
 export type IUserResponse = {
@@ -82,6 +86,8 @@ export type IUserResponse = {
   zip: string | null;
   country: string | null;
   isEmailVerified: boolean;
+  profilePhoto: string | null;
+  coverPhoto: string | null;
   createdAt: Date;
   updatedAt: Date;
 };

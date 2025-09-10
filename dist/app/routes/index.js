@@ -15,6 +15,7 @@ const tourBooking_route_1 = require("../modules/TourBooking/tourBooking.route");
 const admin_route_1 = require("../modules/Admin/admin.route");
 const userAssistance_route_1 = require("../modules/UserAssistance/userAssistance.route");
 const cancelRequest_route_1 = require("../modules/CancelRequest/cancelRequest.route");
+const upload_route_1 = require("../modules/Upload/upload.route");
 const router = express_1.default.Router();
 const moduleRoutes = [
     {
@@ -60,6 +61,10 @@ const moduleRoutes = [
     {
         path: '/cancel-requests',
         route: cancelRequest_route_1.CancelRequestRoutes,
+    },
+    {
+        path: '/upload',
+        route: upload_route_1.UploadRoutes,
     }
 ];
 moduleRoutes.forEach(route => router.use(route.path, route.route));

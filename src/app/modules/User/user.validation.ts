@@ -23,6 +23,8 @@ export const updateUserProfileZodSchema = z.object({
       .min(1, "Zip code cannot be empty")
       .max(20, "Zip code cannot exceed 20 characters")
       .optional(),
+    profilePhoto: z.string().url("Invalid profile photo URL").optional(),
+    coverPhoto: z.string().url("Invalid cover photo URL").optional(),
   }),
 });
 

@@ -19,6 +19,7 @@ const http_status_1 = __importDefault(require("http-status"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const config_1 = __importDefault(require("../../../config"));
 const sendEmail_1 = require("../../utils/sendEmail");
+const s3Helper_1 = require("../../utils/s3Helper");
 //=====================Get User Profile=====================
 const getUserProfile = (email) => __awaiter(void 0, void 0, void 0, function* () {
     const user = yield prisma_1.default.user.findUnique({
@@ -41,6 +42,8 @@ const getUserProfile = (email) => __awaiter(void 0, void 0, void 0, function* ()
             zip: true,
             country: true,
             isEmailVerified: true,
+            profilePhoto: true,
+            coverPhoto: true,
             createdAt: true,
             updatedAt: true,
         },
@@ -58,6 +61,9 @@ const updateUserProfile = (email, updateData) => __awaiter(void 0, void 0, void 
     if (!user) {
         throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'User not found');
     }
+    // Store old photo URLs for cleanup after successful update
+    const oldProfilePhoto = user.profilePhoto;
+    const oldCoverPhoto = user.coverPhoto;
     const updatedUser = yield prisma_1.default.user.update({
         where: { email },
         data: updateData,
@@ -78,11 +84,34 @@ const updateUserProfile = (email, updateData) => __awaiter(void 0, void 0, void 
             state: true,
             zip: true,
             country: true,
+            profilePhoto: true,
+            coverPhoto: true,
             isEmailVerified: true,
             createdAt: true,
             updatedAt: true,
         },
     });
+    // Delete old photos from S3 AFTER successful profile update
+    if (updateData.profilePhoto && updateData.profilePhoto !== oldProfilePhoto && oldProfilePhoto) {
+        try {
+            yield (0, s3Helper_1.deletePhotoFromS3)(oldProfilePhoto);
+            console.log('Successfully deleted old profile photo:', oldProfilePhoto);
+        }
+        catch (error) {
+            console.error('Failed to delete old profile photo:', error);
+            // Don't throw error - profile update was successful
+        }
+    }
+    if (updateData.coverPhoto && updateData.coverPhoto !== oldCoverPhoto && oldCoverPhoto) {
+        try {
+            yield (0, s3Helper_1.deletePhotoFromS3)(oldCoverPhoto);
+            console.log('Successfully deleted old cover photo:', oldCoverPhoto);
+        }
+        catch (error) {
+            console.error('Failed to delete old cover photo:', error);
+            // Don't throw error - profile update was successful
+        }
+    }
     return updatedUser;
 });
 //=====================Change Password=====================
@@ -317,6 +346,8 @@ const getUserById = (userId) => __awaiter(void 0, void 0, void 0, function* () {
             zip: true,
             country: true,
             isEmailVerified: true,
+            profilePhoto: true,
+            coverPhoto: true,
             createdAt: true,
             updatedAt: true,
         },
@@ -359,6 +390,8 @@ const updateUserRole = (userId, newRole) => __awaiter(void 0, void 0, void 0, fu
             zip: true,
             country: true,
             isEmailVerified: true,
+            profilePhoto: true,
+            coverPhoto: true,
             createdAt: true,
             updatedAt: true,
         },
