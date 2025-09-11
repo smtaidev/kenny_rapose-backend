@@ -105,6 +105,19 @@ const getAllCancelRequestsWithDetails = catchAsync(async (req: AuthRequest, res:
   });
 });
 
+//=====================Soft Delete User by ID (Admin Only)=====================
+const softDeleteUserById = catchAsync(async (req: AuthRequest, res: Response) => {
+  const { userId } = req.params;
+  const result = await AdminService.softDeleteUserById(userId);
+  
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User soft deleted successfully',
+    data: result,
+  });
+});
+
 export const AdminController = {
   getDashboardStats,
   getUsersByCountry,
@@ -113,4 +126,5 @@ export const AdminController = {
   getTourPackageAnalytics,
   getCancelRequestStats,
   getAllCancelRequestsWithDetails,
+  softDeleteUserById,
 };

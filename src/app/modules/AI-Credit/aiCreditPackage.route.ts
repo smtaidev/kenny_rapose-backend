@@ -12,6 +12,13 @@ router.get(
   AiCreditPackageController.getAllAiCreditPackages
 );
 
+//=====================Get Simple Credit Purchase History (User Only)=====================
+router.get(
+  '/credit-history',
+  auth,
+  AiCreditPackageController.getSimpleCreditPurchaseHistory
+);
+
 //=====================Get AI Credit Package by ID (Public)=====================
 router.get(
   '/:id',

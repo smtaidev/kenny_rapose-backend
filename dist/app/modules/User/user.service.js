@@ -33,6 +33,7 @@ const getUserProfile = (email) => __awaiter(void 0, void 0, void 0, function* ()
             role: true,
             isActive: true,
             aiCredits: true,
+            breezeWalletBalance: true,
             gender: true,
             dateOfBirth: true,
             phone: true,
@@ -263,6 +264,7 @@ const softDeleteUser = (email) => __awaiter(void 0, void 0, void 0, function* ()
         where: { email },
         data: {
             isActive: false,
+            isDeleted: true,
             deletedAt: new Date(),
         },
     });

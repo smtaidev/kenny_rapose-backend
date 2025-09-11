@@ -11,6 +11,8 @@ import { AdminRoutes } from "../modules/Admin/admin.route";
 import { UserAssistanceRoutes } from "../modules/UserAssistance/userAssistance.route";
 import { CancelRequestRoutes } from "../modules/CancelRequest/cancelRequest.route";
 import { UploadRoutes } from "../modules/Upload/upload.route";
+import { CartRoutes } from "../modules/Cart/cart.route";
+import { SubscriptionRoutes } from "../modules/Subscription/subscription.route";
 
 const router: Router = express.Router();
 
@@ -62,6 +64,14 @@ const moduleRoutes = [
     {
         path: '/upload',
         route: UploadRoutes,
+    },
+    {
+        path: '/cart',
+        route: CartRoutes,
+    },
+    {
+        path: '/subscription',
+        route: SubscriptionRoutes,
     }
 ];
 

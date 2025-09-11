@@ -3,7 +3,8 @@ import { BreezeWalletController } from './breezeWallet.controller';
 import validateRequest from '../../middlewares/validateRequest';
 import { 
   createBreezeWalletPackageZodSchema, 
-  updateBreezeWalletPackageZodSchema
+  updateBreezeWalletPackageZodSchema,
+  convertCreditsToWalletZodSchema
 } from './breezeWallet.validation';
 import auth, { requireAdmin } from '../../middlewares/auth';
 
@@ -63,12 +64,26 @@ router.delete(
   BreezeWalletController.deleteBreezeWalletPackage
 );
 
+//=====================Get Simple Wallet Top-up History (User Only)=====================
+router.get(
+  '/topup-history',
+  auth,
+  BreezeWalletController.getSimpleWalletTopUpHistory
+);
+
 //=====================Get User's Breeze Wallet Balance (Authenticated User)=====================
 router.get(
-  '/balance/:userId',
+  '/balance',
   auth,
   BreezeWalletController.getWalletBalance
 );
 
+//=====================Convert AI Credits to Wallet Balance (Authenticated User)=====================
+router.post(
+  '/convert-credits',
+  auth,
+  validateRequest(convertCreditsToWalletZodSchema),
+  BreezeWalletController.convertCreditsToWallet
+);
 
 export const BreezeWalletRoutes = router;

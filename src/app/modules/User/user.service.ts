@@ -20,6 +20,7 @@ const getUserProfile = async (email: string) => {
       role: true,
       isActive: true,
       aiCredits: true,
+      breezeWalletBalance: true,
       gender: true,
       dateOfBirth: true,
       phone: true,
@@ -292,6 +293,7 @@ const softDeleteUser = async (email: string) => {
     where: { email },
     data: { 
       isActive: false,
+      isDeleted: true,
       deletedAt: new Date(),
     },
   });

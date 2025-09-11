@@ -164,10 +164,53 @@ const getAllAiCreditPackages = async () => {
   return packages;
 };
 
+//=====================Get Simple Credit Purchase History=====================
+const getSimpleCreditPurchaseHistory = async (
+  userId: string,
+  page = 1,
+  limit = 20
+) => {
+  const skip = (page - 1) * limit;
+
+  const [purchases, totalCount] = await Promise.all([
+    prisma.creditPurchase.findMany({
+      where: { userId },
+      skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      select: {
+        creditsPurchased: true,
+        amountPaid: true,
+        createdAt: true,
+      },
+    }),
+    prisma.creditPurchase.count({ where: { userId } }),
+  ]);
+
+  // Simple formatting
+  const history = purchases.map((purchase) => ({
+    credit: purchase.creditsPurchased,
+    amount: purchase.amountPaid,
+    buyingDate: purchase.createdAt,
+  }));
+
+  return {
+    history,
+    pagination: {
+      page,
+      limit,
+      total: totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+    },
+  };
+};
+
+
 export const AiCreditPackageService = {
   createAiCreditPackage,
   updateAiCreditPackage,
   deleteAiCreditPackage,
   getAiCreditPackageById,
   getAllAiCreditPackages,
+  getSimpleCreditPurchaseHistory,
 };

@@ -45,6 +45,8 @@ const auth_1 = __importStar(require("../../middlewares/auth"));
 const router = express_1.default.Router();
 //=====================Get All AI Credit Packages (Public)=====================
 router.get('/', aiCreditPackage_controller_1.AiCreditPackageController.getAllAiCreditPackages);
+//=====================Get Simple Credit Purchase History (User Only)=====================
+router.get('/credit-history', auth_1.default, aiCreditPackage_controller_1.AiCreditPackageController.getSimpleCreditPurchaseHistory);
 //=====================Get AI Credit Package by ID (Public)=====================
 router.get('/:id', aiCreditPackage_controller_1.AiCreditPackageController.getAiCreditPackageById);
 //=====================Create AI Credit Package (Admin Only)=====================

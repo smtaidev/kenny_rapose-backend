@@ -146,10 +146,44 @@ const getAllAiCreditPackages = () => __awaiter(void 0, void 0, void 0, function*
     });
     return packages;
 });
+//=====================Get Simple Credit Purchase History=====================
+const getSimpleCreditPurchaseHistory = (userId_1, ...args_1) => __awaiter(void 0, [userId_1, ...args_1], void 0, function* (userId, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+    const [purchases, totalCount] = yield Promise.all([
+        prisma_1.default.creditPurchase.findMany({
+            where: { userId },
+            skip,
+            take: limit,
+            orderBy: { createdAt: "desc" },
+            select: {
+                creditsPurchased: true,
+                amountPaid: true,
+                createdAt: true,
+            },
+        }),
+        prisma_1.default.creditPurchase.count({ where: { userId } }),
+    ]);
+    // Simple formatting
+    const history = purchases.map((purchase) => ({
+        credit: purchase.creditsPurchased,
+        amount: purchase.amountPaid,
+        buyingDate: purchase.createdAt,
+    }));
+    return {
+        history,
+        pagination: {
+            page,
+            limit,
+            total: totalCount,
+            totalPages: Math.ceil(totalCount / limit),
+        },
+    };
+});
 exports.AiCreditPackageService = {
     createAiCreditPackage,
     updateAiCreditPackage,
     deleteAiCreditPackage,
     getAiCreditPackageById,
     getAllAiCreditPackages,
+    getSimpleCreditPurchaseHistory,
 };

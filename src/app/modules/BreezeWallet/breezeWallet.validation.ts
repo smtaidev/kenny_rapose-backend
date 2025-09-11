@@ -26,3 +26,16 @@ export const getWalletBalanceZodSchema = z.object({
     userId: z.string().min(1, 'User ID is required'),
   }),
 });
+
+export const convertCreditsToWalletZodSchema = z.object({
+  body: z.object({
+    creditsToConvert: z
+      .number()
+      .int('Credits must be a whole number')
+      .min(20, 'Minimum 20 credits required for conversion')
+      .refine(
+        (val) => val % 20 === 0,
+        'Credits must be in multiples of 20 (20 credits = $1)'
+      ),
+  }),
+});

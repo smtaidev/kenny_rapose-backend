@@ -215,6 +215,141 @@ const getWalletBalance = async (userId: string) => {
   return user;
 };
 
+//=====================Get Simple Wallet Top-up History=====================
+const getSimpleWalletTopUpHistory = async (userId: string, page = 1, limit = 20) => {
+  const skip = (page - 1) * limit;
+  
+  const [topUps, totalCount] = await Promise.all([
+    prisma.breezeWalletPurchase.findMany({
+      where: { 
+        userId,
+        status: 'COMPLETED'
+      },
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        amountPurchased: true,
+        createdAt: true,
+        breezeWalletPackage: {
+          select: {
+            name: true,
+          }
+        }
+      }
+    }),
+    prisma.breezeWalletPurchase.count({ 
+      where: { 
+        userId,
+        status: 'COMPLETED'
+      } 
+    })
+  ]);
+
+  // Simple formatting
+  const history = topUps.map(topUp => ({
+    topup: topUp.amountPurchased,
+    date: topUp.createdAt,
+  }));
+
+  return {
+    history,
+    pagination: {
+      page,
+      limit,
+      total: totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+    }
+  };
+};
+
+//=====================Convert AI Credits to Wallet Balance=====================
+const convertCreditsToWallet = async (userId: string, creditsToConvert: number) => {
+  // Validate input
+  if (creditsToConvert <= 0) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Credits to convert must be greater than 0");
+  }
+
+  if (creditsToConvert < 20) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Minimum 20 credits required for conversion");
+  }
+
+  if (creditsToConvert % 20 !== 0) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Credits must be in multiples of 20");
+  }
+
+  // Get user's current credit balance
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      aiCredits: true,
+      breezeWalletBalance: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+    },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  // Check if user has enough credits
+  if (user.aiCredits < creditsToConvert) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST, 
+      `Insufficient credits. You have ${user.aiCredits} credits, but trying to convert ${creditsToConvert} credits`
+    );
+  }
+
+  // Calculate wallet amount to add (20 credits = $1)
+  const walletAmountToAdd = creditsToConvert / 20;
+
+  // Use transaction to ensure atomicity
+  const result = await prisma.$transaction(async (tx) => {
+    // Update user's credits and wallet balance
+    const updatedUser = await tx.user.update({
+      where: { id: userId },
+      data: {
+        aiCredits: {
+          decrement: creditsToConvert,
+        },
+        breezeWalletBalance: {
+          increment: walletAmountToAdd,
+        },
+      },
+      select: {
+        id: true,
+        aiCredits: true,
+        breezeWalletBalance: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+      },
+    });
+
+    return updatedUser;
+  });
+
+  return {
+    message: "Credits converted to wallet balance successfully",
+    conversionDetails: {
+      creditsConverted: creditsToConvert,
+      walletAmountAdded: walletAmountToAdd,
+      conversionRate: "20 credits = $1",
+    },
+    user: {
+      id: result.id,
+      firstName: result.firstName,
+      lastName: result.lastName,
+      email: result.email,
+      currentCredits: result.aiCredits,
+      currentWalletBalance: result.breezeWalletBalance,
+    },
+  };
+};
+
 export const BreezeWalletService = {
   createBreezeWalletPackage,
   updateBreezeWalletPackage,
@@ -224,4 +359,6 @@ export const BreezeWalletService = {
   getAllBreezeWalletPackages,
   getAllActiveBreezeWalletPackages,
   getWalletBalance,
+  getSimpleWalletTopUpHistory,
+  convertCreditsToWallet,
 };

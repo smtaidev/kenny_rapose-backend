@@ -3,6 +3,8 @@ import catchAsync from '../../utils/catchAsync';
 import sendResponse from '../../utils/sendResponse';
 import { BreezeWalletService } from './breezeWallet.service';
 import httpStatus from 'http-status';
+import { AuthRequest } from '../../middlewares/auth';
+import AppError from '../../errors/AppError';
 
 //=====================Create Breeze Wallet Package=====================
 const createBreezeWalletPackage = catchAsync(async (req: Request, res: Response) => {
@@ -93,14 +95,65 @@ const getAllActiveBreezeWalletPackages = catchAsync(async (req: Request, res: Re
 });
 
 //=====================Get User's Breeze Wallet Balance=====================
-const getWalletBalance = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.params;
+const getWalletBalance = catchAsync(async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.userId;
+  
+  if (!userId) {
+    throw new AppError(httpStatus.UNAUTHORIZED, 'User not authenticated');
+  }
+
   const result = await BreezeWalletService.getWalletBalance(userId);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: 'Wallet balance retrieved successfully',
+    data: result,
+  });
+});
+
+//=====================Get Simple Wallet Top-up History=====================
+const getSimpleWalletTopUpHistory = catchAsync(async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.userId;
+  const { page = 1, limit = 20 } = req.query;
+
+  if (!userId) {
+    throw new AppError(httpStatus.UNAUTHORIZED, 'User not authenticated');
+  }
+
+  const result = await BreezeWalletService.getSimpleWalletTopUpHistory(
+    userId, 
+    Number(page), 
+    Number(limit)
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Wallet top-up history retrieved successfully',
+    data: result,
+  });
+});
+
+//=====================Convert AI Credits to Wallet Balance=====================
+const convertCreditsToWallet = catchAsync(async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.userId;
+  const { creditsToConvert } = req.body;
+
+  if (!userId) {
+    throw new AppError(httpStatus.UNAUTHORIZED, 'User not authenticated');
+  }
+
+  if (!creditsToConvert) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Credits to convert is required');
+  }
+
+  const result = await BreezeWalletService.convertCreditsToWallet(userId, creditsToConvert);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Credits converted to wallet balance successfully',
     data: result,
   });
 });
@@ -114,4 +167,6 @@ export const BreezeWalletController = {
   getAllBreezeWalletPackages,
   getAllActiveBreezeWalletPackages,
   getWalletBalance,
+  getSimpleWalletTopUpHistory,
+  convertCreditsToWallet,
 };

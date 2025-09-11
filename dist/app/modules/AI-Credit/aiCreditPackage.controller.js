@@ -17,6 +17,7 @@ const catchAsync_1 = __importDefault(require("../../utils/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../utils/sendResponse"));
 const aiCreditPackage_service_1 = require("./aiCreditPackage.service");
 const http_status_1 = __importDefault(require("http-status"));
+const AppError_1 = __importDefault(require("../../errors/AppError"));
 //=====================Create AI Credit Package=====================
 const createAiCreditPackage = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield aiCreditPackage_service_1.AiCreditPackageService.createAiCreditPackage(req.body);
@@ -70,10 +71,27 @@ const getAllAiCreditPackages = (0, catchAsync_1.default)((req, res) => __awaiter
         data: result,
     });
 }));
+//=====================Get Simple Credit Purchase History=====================
+const getSimpleCreditPurchaseHistory = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+    const { page = 1, limit = 20 } = req.query;
+    if (!userId) {
+        throw new AppError_1.default(http_status_1.default.UNAUTHORIZED, 'User not authenticated');
+    }
+    const result = yield aiCreditPackage_service_1.AiCreditPackageService.getSimpleCreditPurchaseHistory(userId, Number(page), Number(limit));
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: 'Credit purchase history retrieved successfully',
+        data: result,
+    });
+}));
 exports.AiCreditPackageController = {
     createAiCreditPackage,
     updateAiCreditPackage,
     deleteAiCreditPackage,
     getAiCreditPackageById,
     getAllAiCreditPackages,
+    getSimpleCreditPurchaseHistory,
 };

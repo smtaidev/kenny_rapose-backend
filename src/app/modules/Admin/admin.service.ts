@@ -616,6 +616,33 @@ const getAllCancelRequestsWithDetails = async (page = 1, limit = 20, status?: st
   };
 };
 
+//=====================Soft Delete User by ID (Admin Only)=====================
+const softDeleteUserById = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId, isActive: true },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User not found or already deleted');
+  }
+
+  // Soft delete the user
+  await prisma.user.update({
+    where: { id: userId },
+    data: { 
+      isActive: false,
+      isDeleted: true,
+      deletedAt: new Date(),
+    },
+  });
+
+  return { 
+    message: 'User soft deleted successfully',
+    userId: userId,
+    deletedAt: new Date()
+  };
+};
+
 export const AdminService = {
   getDashboardStats,
   getUsersByCountry,
@@ -624,4 +651,5 @@ export const AdminService = {
   getTourPackageAnalytics,
   getCancelRequestStats,
   getAllCancelRequestsWithDetails,
+  softDeleteUserById,
 };

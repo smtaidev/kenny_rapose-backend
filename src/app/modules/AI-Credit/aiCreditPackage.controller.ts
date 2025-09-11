@@ -3,6 +3,8 @@ import catchAsync from '../../utils/catchAsync';
 import sendResponse from '../../utils/sendResponse';
 import { AiCreditPackageService } from './aiCreditPackage.service';
 import httpStatus from 'http-status';
+import { AuthRequest } from '../../middlewares/auth';
+import AppError from '../../errors/AppError';
 
 //=====================Create AI Credit Package=====================
 const createAiCreditPackage = catchAsync(async (req: Request, res: Response) => {
@@ -67,10 +69,34 @@ const getAllAiCreditPackages = catchAsync(async (req: Request, res: Response) =>
   });
 });
 
+//=====================Get Simple Credit Purchase History=====================
+const getSimpleCreditPurchaseHistory = catchAsync(async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.userId;
+  const { page = 1, limit = 20 } = req.query;
+
+  if (!userId) {
+    throw new AppError(httpStatus.UNAUTHORIZED, 'User not authenticated');
+  }
+
+  const result = await AiCreditPackageService.getSimpleCreditPurchaseHistory(
+    userId, 
+    Number(page), 
+    Number(limit)
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Credit purchase history retrieved successfully',
+    data: result,
+  });
+});
+
 export const AiCreditPackageController = {
   createAiCreditPackage,
   updateAiCreditPackage,
   deleteAiCreditPackage,
   getAiCreditPackageById,
   getAllAiCreditPackages,
+  getSimpleCreditPurchaseHistory,
 };

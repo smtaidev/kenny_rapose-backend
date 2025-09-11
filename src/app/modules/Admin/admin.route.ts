@@ -62,4 +62,12 @@ router.get(
   AdminController.getAllCancelRequestsWithDetails
 );
 
+//=====================Soft Delete User by ID (Admin Only)=====================
+router.delete(
+  '/users/:userId',
+  auth,
+  requireAdmin,
+  AdminController.softDeleteUserById
+);
+
 export const AdminRoutes = router;
