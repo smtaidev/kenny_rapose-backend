@@ -21,6 +21,22 @@ router.post(
   PaymentController.handleWebhook
 );
 
+// PayPal routes
+// Create PayPal order
+router.post(
+  '/paypal/create-order',
+  auth,
+  validateRequest(paymentValidation.createCheckoutSessionSchema), // Reuse same validation
+  PaymentController.createPayPalOrder
+);
+
+// PayPal webhook (no auth required - PayPal will call this)
+router.post(
+  '/paypal/webhook',
+  express.json(), // JSON body for PayPal webhook
+  PaymentController.handlePayPalWebhook
+);
+
 // Get user's payment history
 router.get(
   '/history',

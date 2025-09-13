@@ -83,10 +83,35 @@ const getPaymentBySessionId = catchAsync(async (req: AuthRequest, res: Response)
   });
 });
 
+// PayPal controller methods
+const createPayPalOrder = catchAsync(async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.userId;
+  const payload = req.body;
+  
+  const result = await PaymentService.createPayPalOrder(userId!, payload);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'PayPal order created successfully',
+    data: result,
+  });
+});
+
+const handlePayPalWebhook = catchAsync(async (req: any, res: Response) => {
+  const payload = req.body;
+  
+  await PaymentService.handlePayPalWebhook(payload);
+  
+  res.json({ received: true });
+});
+
 export const PaymentController = {
   createCheckoutSession,
   handleWebhook,
   getPaymentHistory,
   getPaymentById,
   getPaymentBySessionId,
+  createPayPalOrder,
+  handlePayPalWebhook,
 };

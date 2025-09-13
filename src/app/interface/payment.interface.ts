@@ -30,3 +30,30 @@ export interface IPaymentSuccess {
   credits: number;
   status: string;
 }
+
+// PayPal specific interfaces
+export interface ICreatePayPalOrder {
+  packageId: string;
+  packageType: 'ai-credit' | 'breeze-wallet' | 'tour';
+  successUrl: string;
+  cancelUrl: string;
+  amount?: number;
+  adults?: number;
+  children?: number;
+  infants?: number;
+  travelDate?: string;
+}
+
+export interface IPayPalOrderResponse {
+  orderId: string;
+  approvalUrl: string;
+}
+
+export interface IPayPalWebhook {
+  event_type: string;
+  resource: {
+    id: string;
+    state: string;
+    [key: string]: any;
+  };
+}

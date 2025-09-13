@@ -18,6 +18,7 @@ const cancelRequest_route_1 = require("../modules/CancelRequest/cancelRequest.ro
 const upload_route_1 = require("../modules/Upload/upload.route");
 const cart_route_1 = require("../modules/Cart/cart.route");
 const subscription_route_1 = require("../modules/Subscription/subscription.route");
+const itinerary_routes_1 = require("../modules/itinerary/itinerary.routes");
 const router = express_1.default.Router();
 const moduleRoutes = [
     {
@@ -75,6 +76,10 @@ const moduleRoutes = [
     {
         path: '/subscription',
         route: subscription_route_1.SubscriptionRoutes,
+    },
+    {
+        path: '/itineraries',
+        route: itinerary_routes_1.itineraryRouter,
     }
 ];
 moduleRoutes.forEach(route => router.use(route.path, route.route));

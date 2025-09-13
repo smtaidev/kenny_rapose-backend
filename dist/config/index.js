@@ -19,6 +19,11 @@ exports.default = {
         secretKey: process.env.STRIPE_SECRET_KEY,
         webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
     },
+    paypal: {
+        clientId: process.env.PAYPAL_CLIENT_ID,
+        clientSecret: process.env.PAYPAL_CLIENT_SECRET,
+        mode: process.env.PAYPAL_MODE,
+    },
     jwt: {
         access_secret: (process.env.JWT_ACCESS_SECRET || 'fallback-secret'),
         access_expires_in: (process.env.JWT_ACCESS_EXPIRES_IN || '1d'),

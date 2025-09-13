@@ -13,6 +13,7 @@ import { CancelRequestRoutes } from "../modules/CancelRequest/cancelRequest.rout
 import { UploadRoutes } from "../modules/Upload/upload.route";
 import { CartRoutes } from "../modules/Cart/cart.route";
 import { SubscriptionRoutes } from "../modules/Subscription/subscription.route";
+import { itineraryRouter } from "../modules/itinerary/itinerary.routes";
 
 const router: Router = express.Router();
 
@@ -72,6 +73,10 @@ const moduleRoutes = [
     {
         path: '/subscription',
         route: SubscriptionRoutes,
+    },
+    {
+        path: '/itineraries',
+        route: itineraryRouter,
     }
 ];
 

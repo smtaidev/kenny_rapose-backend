@@ -206,6 +206,8 @@ model Payment {
   status               PaymentStatus         @default(PENDING)
   paymentIntentId      String?
   checkoutSessionId    String?
+  paymentMethod        String?               // STRIPE or PAYPAL
+  externalPaymentId    String?               // PayPal order ID or Stripe payment intent ID
   metadata             Json?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
@@ -246,6 +248,17 @@ model UserAssistance {
   updatedAt   DateTime              @updatedAt
 
   @@map("user_assistance")
+}
+
+model Itinerary {
+  id              String          @id @default(uuid())
+  aiResponse      Json?
+  userInfo        Json?
+  status          ItineraryStatus @default(PENDING)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@map("itineraries")
 }
 
 model CancelRequest {
@@ -326,6 +339,12 @@ enum UserAssistanceStatus {
   IN_PROGRESS
   RESOLVED
   CLOSED
+}
+
+enum ItineraryStatus {
+  PENDING
+  COMPLETED
+  FAILED
 }
 
 enum CancelRequestStatus {
