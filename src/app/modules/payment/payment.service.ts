@@ -1,8 +1,7 @@
 import httpStatus from 'http-status';
 import prisma from '../../utils/prisma';
 import { stripe } from '../../lib/stripe';
-import { paypalClient } from '../../lib/paypal';
-import { OrdersController, CheckoutPaymentIntent } from '@paypal/paypal-server-sdk';
+import { createPayPalOrderAPI } from '../../lib/paypal';
 import { ICreateCheckoutSession, ICheckoutSessionResponse, IPaymentWebhook, ICreatePayPalOrder, IPayPalOrderResponse, IPayPalWebhook } from '../../interface/payment.interface';
 import AppError from '../../errors/AppError';
 import { UserActivityService } from '../UserActivity/userActivity.service';
@@ -149,7 +148,7 @@ const createCheckoutSession = async (
     });
 
     // Create payment record with pending status
-    const payment = await prisma.Payment.create({
+    const payment = await prisma.payment.create({
       data: {
         userId,
         amount: packageAmount, // Store original amount
@@ -243,7 +242,7 @@ const handlePaymentSuccess = async (session: any): Promise<void> => {
     const { userId, packageId, packageType, credits, amount, adults, children, infants } = session.metadata;
     
     // Update payment status
-    await prisma.Payment.updateMany({
+    await prisma.payment.updateMany({
       where: { checkoutSessionId: session.id },
       data: {
         status: 'SUCCEEDED',
@@ -403,7 +402,7 @@ const handlePaymentExpired = async (session: any): Promise<void> => {
     const { packageType } = session.metadata;
     
     // Update payment status
-    await prisma.Payment.updateMany({
+    await prisma.payment.updateMany({
       where: { checkoutSessionId: session.id },
       data: {
         status: 'FAILED',
@@ -444,7 +443,7 @@ const handlePaymentExpired = async (session: any): Promise<void> => {
 };
 
 const getPaymentHistory = async (userId: string) => {
-  const payments = await prisma.Payment.findMany({
+  const payments = await prisma.payment.findMany({
     where: { userId },
     include: {
       creditPurchase: {
@@ -475,7 +474,7 @@ const getPaymentHistory = async (userId: string) => {
 };
 
 const getPaymentById = async (paymentId: string, userId: string) => {
-  const payment = await prisma.Payment.findFirst({
+  const payment = await prisma.payment.findFirst({
     where: { id: paymentId, userId },
     include: {
       creditPurchase: {
@@ -523,7 +522,7 @@ const getPaymentById = async (paymentId: string, userId: string) => {
 };
 
 const getPaymentBySessionId = async (sessionId: string, userId: string) => {
-  const payment = await prisma.Payment.findFirst({
+  const payment = await prisma.payment.findFirst({
     where: { checkoutSessionId: sessionId, userId },
     include: {
       creditPurchase: {
@@ -576,6 +575,11 @@ const createPayPalOrder = async (
   payload: ICreatePayPalOrder
 ): Promise<IPayPalOrderResponse> => {
   const { packageId, packageType, successUrl, cancelUrl } = payload;
+
+  // Debug PayPal configuration
+  console.log('PayPal Client ID:', process.env.PAYPAL_CLIENT_ID);
+  console.log('PayPal Client Secret:', process.env.PAYPAL_CLIENT_SECRET ? 'Set' : 'Not set');
+  console.log('PayPal Mode:', process.env.PAYPAL_MODE);
 
   // Check if PayPal is configured
   if (!process.env.PAYPAL_CLIENT_ID) {
@@ -645,12 +649,12 @@ const createPayPalOrder = async (
   }
 
   try {
-    // Create PayPal order using the correct API
+    // Create PayPal order using REST API
     const orderRequest = {
-      intent: CheckoutPaymentIntent.Capture,
-      purchaseUnits: [{
+      intent: 'CAPTURE',
+      purchase_units: [{
         amount: {
-          currencyCode: 'USD',
+          currency_code: 'USD',
           value: packageAmount.toString(),
         },
         description: packageDescription,
@@ -678,18 +682,17 @@ const createPayPalOrder = async (
       }
     };
 
-    const ordersController = new OrdersController(paypalClient);
-    const result = await ordersController.createOrder({ body: orderRequest });
+    const result = await createPayPalOrderAPI(orderRequest);
     
     // Create payment record in database
-    const payment = await prisma.Payment.create({
+    const payment = await prisma.payment.create({
       data: {
         userId,
         amount: packageAmount,
         currency: 'USD',
         status: 'PENDING',
         paymentMethod: 'PAYPAL',
-        externalPaymentId: result.result?.id,
+        externalPaymentId: result.id,
         metadata: {
           packageId,
           packageType,
@@ -746,14 +749,14 @@ const createPayPalOrder = async (
     }
 
     // Find approval URL
-    const approvalUrl = result.result?.links?.find((link: any) => link.rel === 'approve')?.href;
+    const approvalUrl = result.links?.find((link: any) => link.rel === 'approve')?.href;
     
     if (!approvalUrl) {
       throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to get PayPal approval URL');
     }
 
     return {
-      orderId: result.result?.id || '',
+      orderId: result.id || '',
       approvalUrl: approvalUrl,
     };
   } catch (error: any) {
@@ -772,7 +775,7 @@ const handlePayPalWebhook = async (payload: IPayPalWebhook): Promise<void> => {
     const orderId = resource.id;
     
     // Find payment by external payment ID
-    const payment = await prisma.Payment.findFirst({
+    const payment = await prisma.payment.findFirst({
       where: { externalPaymentId: orderId }
     });
     
@@ -782,7 +785,7 @@ const handlePayPalWebhook = async (payload: IPayPalWebhook): Promise<void> => {
     }
     
     // Update payment status
-    await prisma.Payment.update({
+    await prisma.payment.update({
       where: { id: payment.id },
       data: { status: 'SUCCEEDED' }
     });
