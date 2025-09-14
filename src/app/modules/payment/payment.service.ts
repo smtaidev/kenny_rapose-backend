@@ -813,9 +813,21 @@ const handlePayPalWebhook = async (payload: IPayPalWebhook, headers: any): Promi
 
 // Handle successful payment
 const handlePaymentCompleted = async (resource: any): Promise<void> => {
-  const orderId = resource.id;
+  const captureId = resource.id;
+  console.log('Payment capture resource:', JSON.stringify(resource, null, 2));
   
-  // Find payment by external payment ID
+  // Find payment by external payment ID (order ID, not capture ID)
+  // The capture resource contains the order ID in the purchase_units
+  const orderId = resource.purchase_units?.[0]?.payments?.captures?.[0]?.supplementary_data?.related_id || 
+                  resource.supplementary_data?.related_id;
+  
+  console.log('Looking for order ID:', orderId);
+  
+  if (!orderId) {
+    console.error('Order ID not found in capture resource:', captureId);
+    return;
+  }
+  
   const payment = await prisma.payment.findFirst({
     where: { externalPaymentId: orderId }
   });
