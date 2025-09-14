@@ -149,7 +149,7 @@ const createCheckoutSession = async (
     });
 
     // Create payment record with pending status
-    const payment = await prisma.payment.create({
+    const payment = await prisma.Payment.create({
       data: {
         userId,
         amount: packageAmount, // Store original amount
@@ -243,7 +243,7 @@ const handlePaymentSuccess = async (session: any): Promise<void> => {
     const { userId, packageId, packageType, credits, amount, adults, children, infants } = session.metadata;
     
     // Update payment status
-    await prisma.payment.updateMany({
+    await prisma.Payment.updateMany({
       where: { checkoutSessionId: session.id },
       data: {
         status: 'SUCCEEDED',
@@ -403,7 +403,7 @@ const handlePaymentExpired = async (session: any): Promise<void> => {
     const { packageType } = session.metadata;
     
     // Update payment status
-    await prisma.payment.updateMany({
+    await prisma.Payment.updateMany({
       where: { checkoutSessionId: session.id },
       data: {
         status: 'FAILED',
@@ -444,7 +444,7 @@ const handlePaymentExpired = async (session: any): Promise<void> => {
 };
 
 const getPaymentHistory = async (userId: string) => {
-  const payments = await prisma.payment.findMany({
+  const payments = await prisma.Payment.findMany({
     where: { userId },
     include: {
       creditPurchase: {
@@ -475,7 +475,7 @@ const getPaymentHistory = async (userId: string) => {
 };
 
 const getPaymentById = async (paymentId: string, userId: string) => {
-  const payment = await prisma.payment.findFirst({
+  const payment = await prisma.Payment.findFirst({
     where: { id: paymentId, userId },
     include: {
       creditPurchase: {
@@ -523,7 +523,7 @@ const getPaymentById = async (paymentId: string, userId: string) => {
 };
 
 const getPaymentBySessionId = async (sessionId: string, userId: string) => {
-  const payment = await prisma.payment.findFirst({
+  const payment = await prisma.Payment.findFirst({
     where: { checkoutSessionId: sessionId, userId },
     include: {
       creditPurchase: {
@@ -682,7 +682,7 @@ const createPayPalOrder = async (
     const result = await ordersController.createOrder({ body: orderRequest });
     
     // Create payment record in database
-    const payment = await prisma.payment.create({
+    const payment = await prisma.Payment.create({
       data: {
         userId,
         amount: packageAmount,
@@ -772,7 +772,7 @@ const handlePayPalWebhook = async (payload: IPayPalWebhook): Promise<void> => {
     const orderId = resource.id;
     
     // Find payment by external payment ID
-    const payment = await prisma.payment.findFirst({
+    const payment = await prisma.Payment.findFirst({
       where: { externalPaymentId: orderId }
     });
     
@@ -782,7 +782,7 @@ const handlePayPalWebhook = async (payload: IPayPalWebhook): Promise<void> => {
     }
     
     // Update payment status
-    await prisma.payment.update({
+    await prisma.Payment.update({
       where: { id: payment.id },
       data: { status: 'SUCCEEDED' }
     });

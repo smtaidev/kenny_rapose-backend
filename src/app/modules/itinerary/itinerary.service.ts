@@ -36,7 +36,7 @@ const createItinerary = async (payload: ICreateItinerary): Promise<IItineraryRes
     };
 
     // Create itinerary record with PENDING status
-    const itinerary = await prisma.itinerary.create({
+    const itinerary = await prisma.Itinerary.create({
       data: {
         status: 'PENDING',
         userInfo: userInfo,
@@ -78,7 +78,7 @@ const createItinerary = async (payload: ICreateItinerary): Promise<IItineraryRes
     }
 
     // Update itinerary with AI response
-    const updatedItinerary = await prisma.itinerary.update({
+    const updatedItinerary = await prisma.Itinerary.update({
       where: { id: itinerary.id },
       data: {
         aiResponse: processedAiResponse as any,
@@ -103,7 +103,7 @@ const createItinerary = async (payload: ICreateItinerary): Promise<IItineraryRes
 };
 
 const getItineraryById = async (id: string): Promise<IItineraryResponse> => {
-  const itinerary = await prisma.itinerary.findUnique({
+  const itinerary = await prisma.Itinerary.findUnique({
     where: { id },
   });
 
@@ -121,7 +121,7 @@ const getItineraryById = async (id: string): Promise<IItineraryResponse> => {
 };
 
 const getAllItineraries = async (): Promise<IItineraryResponse[]> => {
-  const itineraries = await prisma.itinerary.findMany({
+  const itineraries = await prisma.Itinerary.findMany({
     orderBy: { createdAt: 'desc' },
   });
 
@@ -137,7 +137,7 @@ const getAllItineraries = async (): Promise<IItineraryResponse[]> => {
 const editActivity = async (payload: IEditActivityRequest) => {
   try {
     // Get itinerary from database
-    const itinerary = await prisma.itinerary.findUnique({
+    const itinerary = await prisma.Itinerary.findUnique({
       where: { id: payload.itinerary_id },
     });
 
@@ -212,7 +212,7 @@ const editActivity = async (payload: IEditActivityRequest) => {
 const updateActivity = async (payload: IUpdateActivityRequest) => {
   try {
     // Get itinerary from database
-    const itinerary = await prisma.itinerary.findUnique({
+    const itinerary = await prisma.Itinerary.findUnique({
       where: { id: payload.itinerary_id },
     });
 
@@ -257,7 +257,7 @@ const updateActivity = async (payload: IUpdateActivityRequest) => {
     }
 
     // Update the itinerary in database
-    const updatedItinerary = await prisma.itinerary.update({
+    const updatedItinerary = await prisma.Itinerary.update({
       where: { id: payload.itinerary_id },
       data: {
         aiResponse: updatedAiResponse as any,
