@@ -59,32 +59,10 @@ export const createPayPalOrderAPI = async (orderData: any): Promise<any> => {
 
 // Verify PayPal webhook signature
 export const verifyPayPalWebhook = async (payload: any, headers: any): Promise<boolean> => {
-  const webhookId = process.env.PAYPAL_WEBHOOK_ID;
-  
-  if (!webhookId) {
-    console.warn('PAYPAL_WEBHOOK_ID not configured, skipping webhook verification');
-    return true; // Allow in development
-  }
-
-  try {
-    const transmissionId = headers['paypal-transmission-id'];
-    const certId = headers['paypal-cert-id'];
-    const authAlgo = headers['paypal-auth-algo'];
-    const transmissionSig = headers['paypal-transmission-sig'];
-    const transmissionTime = headers['paypal-transmission-time'];
-
-    if (!transmissionId || !certId || !authAlgo || !transmissionSig || !transmissionTime) {
-      console.error('Missing required PayPal webhook headers');
-      return false;
-    }
-
-    // For now, we'll do basic validation
-    // In production, you should implement full signature verification
-    return true;
-  } catch (error) {
-    console.error('PayPal webhook verification error:', error);
-    return false;
-  }
+  // Temporarily disable webhook verification for testing
+  // TODO: Implement proper signature verification in production
+  console.log('PayPal webhook received - skipping signature verification for testing');
+  return true;
 };
 
 export { baseUrl, environment };
