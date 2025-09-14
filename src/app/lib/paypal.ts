@@ -65,4 +65,24 @@ export const verifyPayPalWebhook = async (payload: any, headers: any): Promise<b
   return true;
 };
 
+// Capture PayPal order
+export const capturePayPalOrder = async (orderId: string): Promise<any> => {
+  const accessToken = await getPayPalAccessToken();
+  
+  const response = await fetch(`${baseUrl}/v2/checkout/orders/${orderId}/capture`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(`PayPal order capture failed: ${JSON.stringify(errorData)}`);
+  }
+
+  return await response.json();
+};
+
 export { baseUrl, environment };

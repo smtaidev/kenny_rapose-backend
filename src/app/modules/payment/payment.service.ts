@@ -1,7 +1,7 @@
 import httpStatus from 'http-status';
 import prisma from '../../utils/prisma';
 import { stripe } from '../../lib/stripe';
-import { createPayPalOrderAPI, verifyPayPalWebhook } from '../../lib/paypal';
+import { createPayPalOrderAPI, verifyPayPalWebhook, capturePayPalOrder } from '../../lib/paypal';
 import { ICreateCheckoutSession, ICheckoutSessionResponse, IPaymentWebhook, ICreatePayPalOrder, IPayPalOrderResponse, IPayPalWebhook } from '../../interface/payment.interface';
 import AppError from '../../errors/AppError';
 import { UserActivityService } from '../UserActivity/userActivity.service';
@@ -795,7 +795,7 @@ const handlePayPalWebhook = async (payload: IPayPalWebhook, headers: any): Promi
         break;
       
       case 'CHECKOUT.ORDER.APPROVED':
-        console.log('Order approved:', resource.id);
+        await handleOrderApproved(resource);
         break;
       
       case 'CHECKOUT.ORDER.VOIDED':
@@ -1055,6 +1055,24 @@ const handlePaymentRefunded = async (resource: any): Promise<void> => {
       where: { paymentId: payment.id },
       data: { status: 'REFUNDED' }
     });
+  }
+};
+
+// Handle order approved - capture the payment
+const handleOrderApproved = async (resource: any): Promise<void> => {
+  const orderId = resource.id;
+  console.log('Order approved, capturing payment:', orderId);
+  
+  try {
+    // Capture the PayPal order
+    const captureResult = await capturePayPalOrder(orderId);
+    console.log('Order captured successfully:', captureResult.id);
+    
+    // The capture will trigger PAYMENT.CAPTURE.COMPLETED webhook
+    // which will handle the actual payment processing
+  } catch (error) {
+    console.error('Failed to capture PayPal order:', error);
+    throw error;
   }
 };
 
