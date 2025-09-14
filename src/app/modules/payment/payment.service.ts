@@ -1,7 +1,7 @@
 import httpStatus from 'http-status';
 import prisma from '../../utils/prisma';
 import { stripe } from '../../lib/stripe';
-import { createPayPalOrderAPI } from '../../lib/paypal';
+import { createPayPalOrderAPI, verifyPayPalWebhook } from '../../lib/paypal';
 import { ICreateCheckoutSession, ICheckoutSessionResponse, IPaymentWebhook, ICreatePayPalOrder, IPayPalOrderResponse, IPayPalWebhook } from '../../interface/payment.interface';
 import AppError from '../../errors/AppError';
 import { UserActivityService } from '../UserActivity/userActivity.service';
@@ -768,151 +768,334 @@ const createPayPalOrder = async (
   }
 };
 
-const handlePayPalWebhook = async (payload: IPayPalWebhook): Promise<void> => {
-  const { event_type, resource } = payload;
-  
-  if (event_type === 'PAYMENT.CAPTURE.COMPLETED') {
-    const orderId = resource.id;
-    
-    // Find payment by external payment ID
-    const payment = await prisma.payment.findFirst({
-      where: { externalPaymentId: orderId }
-    });
-    
-    if (!payment) {
-      console.error('Payment not found for PayPal order:', orderId);
-      return;
+const handlePayPalWebhook = async (payload: IPayPalWebhook, headers: any): Promise<void> => {
+  try {
+    // Verify webhook signature
+    const isValid = await verifyPayPalWebhook(payload, headers);
+    if (!isValid) {
+      console.error('Invalid PayPal webhook signature');
+      throw new Error('Invalid webhook signature');
     }
-    
-    // Update payment status
-    await prisma.payment.update({
-      where: { id: payment.id },
-      data: { status: 'SUCCEEDED' }
+
+    const { event_type, resource } = payload;
+    console.log(`Processing PayPal webhook event: ${event_type}`);
+
+    // Handle different PayPal events
+    switch (event_type) {
+      case 'PAYMENT.CAPTURE.COMPLETED':
+        await handlePaymentCompleted(resource);
+        break;
+      
+      case 'PAYMENT.CAPTURE.DENIED':
+        await handlePaymentDenied(resource);
+        break;
+      
+      case 'PAYMENT.CAPTURE.REFUNDED':
+        await handlePaymentRefunded(resource);
+        break;
+      
+      case 'CHECKOUT.ORDER.APPROVED':
+        console.log('Order approved:', resource.id);
+        break;
+      
+      case 'CHECKOUT.ORDER.VOIDED':
+        await handleOrderVoided(resource);
+        break;
+      
+      default:
+        console.log(`Unhandled PayPal webhook event: ${event_type}`);
+    }
+  } catch (error) {
+    console.error('PayPal webhook processing error:', error);
+    throw error; // Re-throw to return 500 status
+  }
+};
+
+// Handle successful payment
+const handlePaymentCompleted = async (resource: any): Promise<void> => {
+  const orderId = resource.id;
+  
+  // Find payment by external payment ID
+  const payment = await prisma.payment.findFirst({
+    where: { externalPaymentId: orderId }
+  });
+  
+  if (!payment) {
+    console.error('Payment not found for PayPal order:', orderId);
+    return;
+  }
+  
+  // Update payment status
+  await prisma.payment.update({
+    where: { id: payment.id },
+    data: { status: 'SUCCEEDED' }
+  });
+  
+  // Update related purchase records based on package type
+  const metadata = payment.metadata as any;
+  const packageType = metadata.packageType;
+  
+  if (packageType === 'ai-credit') {
+    await prisma.creditPurchase.updateMany({
+      where: { paymentId: payment.id },
+      data: { status: 'COMPLETED' }
     });
     
-    // Update related purchase records based on package type
-    const metadata = payment.metadata as any;
-    const packageType = metadata.packageType;
+    // Add credits to user
+    await prisma.user.update({
+      where: { id: payment.userId },
+      data: { 
+        aiCredits: { 
+          increment: metadata.credits || 0 
+        } 
+      }
+    });
+
+    // Create user activity record
+    await UserActivityService.createUserActivity({
+      userId: payment.userId,
+      type: 'AI_CREDIT_PURCHASE',
+      title: 'AI Credit Package Booked',
+      message: `AI Credit Package (${metadata.credits} credits) booked successfully`,
+      metadata: {
+        packageId: metadata.packageId,
+        credits: metadata.credits,
+        amount: payment.amount,
+        paymentId: payment.id,
+      },
+    });
+  } else if (packageType === 'breeze-wallet') {
+    await prisma.breezeWalletPurchase.updateMany({
+      where: { paymentId: payment.id },
+      data: { status: 'COMPLETED' }
+    });
     
-    if (packageType === 'ai-credit') {
-      await prisma.creditPurchase.updateMany({
-        where: { paymentId: payment.id },
-        data: { status: 'COMPLETED' }
-      });
+    // Add to user's breeze wallet
+    await prisma.user.update({
+      where: { id: payment.userId },
+      data: { 
+        breezeWalletBalance: { 
+          increment: metadata.amount || 0 
+        } 
+      }
+    });
+
+    // Create user activity record
+    await UserActivityService.createUserActivity({
+      userId: payment.userId,
+      type: 'WALLET_TOPUP',
+      title: 'Wallet Topup Successful',
+      message: `Wallet Topup ($${metadata.amount}) added successfully`,
+      metadata: {
+        packageId: metadata.packageId,
+        amount: metadata.amount,
+        paymentId: payment.id,
+      },
+    });
+  } else if (packageType === 'tour') {
+    await prisma.tourBooking.updateMany({
+      where: { paymentId: payment.id },
+      data: { status: 'CONFIRMED' }
+    });
+
+    // Get tour package details for cashback calculation
+    const tourPackage = await prisma.tourPackage.findUnique({
+      where: { id: metadata.packageId },
+      select: { breezeCredit: true, packageName: true },
+    });
+
+    // Calculate and add cashback to Breeze Wallet
+    if (tourPackage && tourPackage.breezeCredit > 0) {
+      const totalAmount = payment.amount;
+      const cashbackAmount = (totalAmount * tourPackage.breezeCredit) / 100;
       
-      // Add credits to user
+      // Add cashback to user's Breeze Wallet
       await prisma.user.update({
         where: { id: payment.userId },
-        data: { 
-          aiCredits: { 
-            increment: metadata.credits || 0 
-          } 
-        }
-      });
-
-      // Create user activity record
-      await UserActivityService.createUserActivity({
-        userId: payment.userId,
-        type: 'AI_CREDIT_PURCHASE',
-        title: 'AI Credit Package Booked',
-        message: `AI Credit Package (${metadata.credits} credits) booked successfully`,
-        metadata: {
-          packageId: metadata.packageId,
-          credits: metadata.credits,
-          amount: payment.amount,
-          paymentId: payment.id,
+        data: {
+          breezeWalletBalance: {
+            increment: cashbackAmount,
+          },
         },
       });
-    } else if (packageType === 'breeze-wallet') {
-      await prisma.breezeWalletPurchase.updateMany({
-        where: { paymentId: payment.id },
-        data: { status: 'COMPLETED' }
-      });
-      
-      // Add to user's breeze wallet
-      await prisma.user.update({
-        where: { id: payment.userId },
-        data: { 
-          breezeWalletBalance: { 
-            increment: metadata.amount || 0 
-          } 
-        }
-      });
 
-      // Create user activity record
+      // Create user activity for cashback
       await UserActivityService.createUserActivity({
         userId: payment.userId,
         type: 'WALLET_TOPUP',
-        title: 'Wallet Topup Successful',
-        message: `Wallet Topup ($${metadata.amount}) added successfully`,
+        title: 'Tour Booking Cashback',
+        message: `$${cashbackAmount.toFixed(2)} cashback added to Breeze Wallet (${tourPackage.breezeCredit}% of tour booking)`,
         metadata: {
-          packageId: metadata.packageId,
-          amount: metadata.amount,
+          type: 'tour_cashback',
+          tourPackageId: metadata.packageId,
+          tourPackageName: tourPackage.packageName,
+          cashbackPercentage: tourPackage.breezeCredit,
+          cashbackAmount,
+          originalAmount: totalAmount,
           paymentId: payment.id,
-        },
-      });
-    } else if (packageType === 'tour') {
-      await prisma.tourBooking.updateMany({
-        where: { paymentId: payment.id },
-        data: { status: 'CONFIRMED' }
-      });
-
-      // Get tour package details for cashback calculation
-      const tourPackage = await prisma.tourPackage.findUnique({
-        where: { id: metadata.packageId },
-        select: { breezeCredit: true, packageName: true },
-      });
-
-      // Calculate and add cashback to Breeze Wallet
-      if (tourPackage && tourPackage.breezeCredit > 0) {
-        const totalAmount = payment.amount;
-        const cashbackAmount = (totalAmount * tourPackage.breezeCredit) / 100;
-        
-        // Add cashback to user's Breeze Wallet
-        await prisma.user.update({
-          where: { id: payment.userId },
-          data: {
-            breezeWalletBalance: {
-              increment: cashbackAmount,
-            },
-          },
-        });
-
-        // Create user activity for cashback
-        await UserActivityService.createUserActivity({
-          userId: payment.userId,
-          type: 'WALLET_TOPUP',
-          title: 'Tour Booking Cashback',
-          message: `$${cashbackAmount.toFixed(2)} cashback added to Breeze Wallet (${tourPackage.breezeCredit}% of tour booking)`,
-          metadata: {
-            type: 'tour_cashback',
-            tourPackageId: metadata.packageId,
-            tourPackageName: tourPackage.packageName,
-            cashbackPercentage: tourPackage.breezeCredit,
-            cashbackAmount,
-            originalAmount: totalAmount,
-            paymentId: payment.id,
-          },
-        });
-      }
-
-      // Create user activity record for tour booking
-      await UserActivityService.createUserActivity({
-        userId: payment.userId,
-        type: 'TOUR_BOOKING',
-        title: 'Tour Package Booked',
-        message: `Tour package booked successfully for ${metadata.adults} adults, ${metadata.children} children, ${metadata.infants} infants`,
-        metadata: {
-          packageId: metadata.packageId,
-          adults: metadata.adults || 0,
-          children: metadata.children || 0,
-          infants: metadata.infants || 0,
-          amount: payment.amount,
-          paymentId: payment.id,
-          cashbackEarned: tourPackage?.breezeCredit ? (payment.amount * tourPackage.breezeCredit) / 100 : 0,
         },
       });
     }
+
+    // Create user activity record for tour booking
+    await UserActivityService.createUserActivity({
+      userId: payment.userId,
+      type: 'TOUR_BOOKING',
+      title: 'Tour Package Booked',
+      message: `Tour package booked successfully for ${metadata.adults} adults, ${metadata.children} children, ${metadata.infants} infants`,
+      metadata: {
+        packageId: metadata.packageId,
+        adults: metadata.adults || 0,
+        children: metadata.children || 0,
+        infants: metadata.infants || 0,
+        amount: payment.amount,
+        paymentId: payment.id,
+        cashbackEarned: tourPackage?.breezeCredit ? (payment.amount * tourPackage.breezeCredit) / 100 : 0,
+      },
+    });
+  }
+};
+
+// Handle failed payment
+const handlePaymentDenied = async (resource: any): Promise<void> => {
+  const orderId = resource.id;
+  
+  const payment = await prisma.payment.findFirst({
+    where: { externalPaymentId: orderId }
+  });
+  
+  if (!payment) {
+    console.error('Payment not found for PayPal order:', orderId);
+    return;
+  }
+  
+  // Update payment status
+  await prisma.payment.update({
+    where: { id: payment.id },
+    data: { status: 'FAILED' }
+  });
+  
+  // Update related purchase records
+  const metadata = payment.metadata as any;
+  const packageType = metadata.packageType;
+  
+  if (packageType === 'ai-credit') {
+    await prisma.creditPurchase.updateMany({
+      where: { paymentId: payment.id },
+      data: { status: 'FAILED' }
+    });
+  } else if (packageType === 'breeze-wallet') {
+    await prisma.breezeWalletPurchase.updateMany({
+      where: { paymentId: payment.id },
+      data: { status: 'FAILED' }
+    });
+  } else if (packageType === 'tour') {
+    await prisma.tourBooking.updateMany({
+      where: { paymentId: payment.id },
+      data: { status: 'CANCELLED' }
+    });
+  }
+};
+
+// Handle refunded payment
+const handlePaymentRefunded = async (resource: any): Promise<void> => {
+  const orderId = resource.id;
+  
+  const payment = await prisma.payment.findFirst({
+    where: { externalPaymentId: orderId }
+  });
+  
+  if (!payment) {
+    console.error('Payment not found for PayPal order:', orderId);
+    return;
+  }
+  
+  // Update payment status
+  await prisma.payment.update({
+    where: { id: payment.id },
+    data: { status: 'CANCELED' }
+  });
+  
+  // Update related purchase records
+  const metadata = payment.metadata as any;
+  const packageType = metadata.packageType;
+  
+  if (packageType === 'ai-credit') {
+    await prisma.creditPurchase.updateMany({
+      where: { paymentId: payment.id },
+      data: { status: 'REFUNDED' }
+    });
+    
+    // Remove credits from user
+    await prisma.user.update({
+      where: { id: payment.userId },
+      data: { 
+        aiCredits: { 
+          decrement: metadata.credits || 0 
+        } 
+      }
+    });
+  } else if (packageType === 'breeze-wallet') {
+    await prisma.breezeWalletPurchase.updateMany({
+      where: { paymentId: payment.id },
+      data: { status: 'REFUNDED' }
+    });
+    
+    // Remove wallet balance from user
+    await prisma.user.update({
+      where: { id: payment.userId },
+      data: { 
+        breezeWalletBalance: { 
+          decrement: metadata.amount || 0 
+        } 
+      }
+    });
+  } else if (packageType === 'tour') {
+    await prisma.tourBooking.updateMany({
+      where: { paymentId: payment.id },
+      data: { status: 'REFUNDED' }
+    });
+  }
+};
+
+// Handle voided order
+const handleOrderVoided = async (resource: any): Promise<void> => {
+  const orderId = resource.id;
+  
+  const payment = await prisma.payment.findFirst({
+    where: { externalPaymentId: orderId }
+  });
+  
+  if (!payment) {
+    console.error('Payment not found for PayPal order:', orderId);
+    return;
+  }
+  
+  // Update payment status
+  await prisma.payment.update({
+    where: { id: payment.id },
+    data: { status: 'CANCELED' }
+  });
+  
+  // Update related purchase records
+  const metadata = payment.metadata as any;
+  const packageType = metadata.packageType;
+  
+  if (packageType === 'ai-credit') {
+    await prisma.creditPurchase.updateMany({
+      where: { paymentId: payment.id },
+      data: { status: 'FAILED' }
+    });
+  } else if (packageType === 'breeze-wallet') {
+    await prisma.breezeWalletPurchase.updateMany({
+      where: { paymentId: payment.id },
+      data: { status: 'FAILED' }
+    });
+  } else if (packageType === 'tour') {
+    await prisma.tourBooking.updateMany({
+      where: { paymentId: payment.id },
+      data: { status: 'CANCELLED' }
+    });
   }
 };
 

@@ -100,8 +100,9 @@ const createPayPalOrder = catchAsync(async (req: AuthRequest, res: Response) => 
 
 const handlePayPalWebhook = catchAsync(async (req: any, res: Response) => {
   const payload = req.body;
+  const headers = req.headers;
   
-  await PaymentService.handlePayPalWebhook(payload);
+  await PaymentService.handlePayPalWebhook(payload, headers);
   
   res.json({ received: true });
 });
