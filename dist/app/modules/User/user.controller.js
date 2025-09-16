@@ -37,7 +37,29 @@ const getUserProfile = (0, catchAsync_1.default)((req, res) => __awaiter(void 0,
 // =====================Update User Profile=====================
 const updateUserProfile = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { email } = req.user;
-    const result = yield user_service_1.UserService.updateUserProfile(email, req.body);
+    // Check if request has files (multipart/form-data)
+    const files = req.files;
+    let result;
+    if (files && (files.profilePhoto || files.coverPhoto)) {
+        // Handle with photos - extract form data
+        const updateData = {
+            firstName: req.body.firstName,
+            lastName: req.body.lastName,
+            gender: req.body.gender,
+            dateOfBirth: req.body.dateOfBirth ? new Date(req.body.dateOfBirth) : undefined,
+            phone: req.body.phone,
+            address: req.body.address,
+            city: req.body.city,
+            state: req.body.state,
+            zip: req.body.zip,
+            country: req.body.country,
+        };
+        result = yield user_service_1.UserService.updateUserProfileWithPhotos(email, updateData, files);
+    }
+    else {
+        // Handle without photos - use req.body directly
+        result = yield user_service_1.UserService.updateUserProfile(email, req.body);
+    }
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,

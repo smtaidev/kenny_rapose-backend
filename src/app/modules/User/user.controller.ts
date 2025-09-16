@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import catchAsync from '../../utils/catchAsync';
 import sendResponse from '../../utils/sendResponse';
 import { UserService } from './user.service';
-import { IUserResponse } from '../../interface/user.interface';
+import { IUserResponse, IUpdateUser } from '../../interface/user.interface';
 import httpStatus from 'http-status';
 import { AuthRequest } from '../../middlewares/auth';
 import AppError from '../../errors/AppError';
@@ -27,7 +27,35 @@ const getUserProfile = catchAsync(async (req: AuthRequest, res: Response) => {
 // =====================Update User Profile=====================
 const updateUserProfile = catchAsync(async (req: AuthRequest, res: Response) => {
   const { email } = req.user as { email: string };
-  const result = await UserService.updateUserProfile(email, req.body);
+  
+  // Check if request has files (multipart/form-data)
+  const files = req.files as {
+    profilePhoto?: Express.Multer.File[];
+    coverPhoto?: Express.Multer.File[];
+  };
+
+  let result;
+  
+  if (files && (files.profilePhoto || files.coverPhoto)) {
+    // Handle with photos - extract form data
+    const updateData: IUpdateUser = {
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+      gender: req.body.gender,
+      dateOfBirth: req.body.dateOfBirth ? new Date(req.body.dateOfBirth) : undefined,
+      phone: req.body.phone,
+      address: req.body.address,
+      city: req.body.city,
+      state: req.body.state,
+      zip: req.body.zip,
+      country: req.body.country,
+    };
+    
+    result = await UserService.updateUserProfileWithPhotos(email, updateData, files);
+  } else {
+    // Handle without photos - use req.body directly
+    result = await UserService.updateUserProfile(email, req.body);
+  }
 
   sendResponse<IUserResponse>(res, {
     statusCode: httpStatus.OK,
@@ -36,7 +64,6 @@ const updateUserProfile = catchAsync(async (req: AuthRequest, res: Response) => 
     data: result,
   });
 });
-
 
 //=======================Change Password=======================
 

@@ -11,6 +11,7 @@ import {
   updateUserRoleZodSchema,
 } from './user.validation';
 import { requireAdmin } from '../../middlewares/auth';
+import upload from '../../middlewares/upload';
 
 const router = Router();
 
@@ -26,11 +27,14 @@ router.get('/:id', auth, requireAdmin, UserController.getUserById);
 //==============Update User Role (Admin Only)=================
 router.patch('/:id/role', auth, requireSuperAdmin, validateRequest(updateUserRoleZodSchema), UserController.updateUserRole);
 
-//==============Update Profile==============
+//==============Update Profile (Handles both JSON and multipart)==============
 router.patch(
   '/profile',
   auth,
-  validateRequest(updateUserProfileZodSchema),
+  upload.fields([
+    { name: 'profilePhoto', maxCount: 1 },
+    { name: 'coverPhoto', maxCount: 1 }
+  ]),
   UserController.updateUserProfile,
 );
 

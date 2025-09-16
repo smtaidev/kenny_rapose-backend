@@ -19,7 +19,7 @@ const http_status_1 = __importDefault(require("http-status"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const config_1 = __importDefault(require("../../../config"));
 const sendEmail_1 = require("../../utils/sendEmail");
-const s3Helper_1 = require("../../utils/s3Helper");
+const s3Upload_1 = require("../../utils/s3Upload");
 //=====================Get User Profile=====================
 const getUserProfile = (email) => __awaiter(void 0, void 0, void 0, function* () {
     const user = yield prisma_1.default.user.findUnique({
@@ -95,7 +95,7 @@ const updateUserProfile = (email, updateData) => __awaiter(void 0, void 0, void 
     // Delete old photos from S3 AFTER successful profile update
     if (updateData.profilePhoto && updateData.profilePhoto !== oldProfilePhoto && oldProfilePhoto) {
         try {
-            yield (0, s3Helper_1.deletePhotoFromS3)(oldProfilePhoto);
+            yield (0, s3Upload_1.deleteFileFromS3)(oldProfilePhoto);
             console.log('Successfully deleted old profile photo:', oldProfilePhoto);
         }
         catch (error) {
@@ -105,12 +105,96 @@ const updateUserProfile = (email, updateData) => __awaiter(void 0, void 0, void 
     }
     if (updateData.coverPhoto && updateData.coverPhoto !== oldCoverPhoto && oldCoverPhoto) {
         try {
-            yield (0, s3Helper_1.deletePhotoFromS3)(oldCoverPhoto);
+            yield (0, s3Upload_1.deleteFileFromS3)(oldCoverPhoto);
             console.log('Successfully deleted old cover photo:', oldCoverPhoto);
         }
         catch (error) {
             console.error('Failed to delete old cover photo:', error);
             // Don't throw error - profile update was successful
+        }
+    }
+    return updatedUser;
+});
+//=====================Update User Profile with Photos=====================
+const updateUserProfileWithPhotos = (email, updateData, files) => __awaiter(void 0, void 0, void 0, function* () {
+    const user = yield prisma_1.default.user.findUnique({
+        where: { email, isActive: true },
+    });
+    if (!user) {
+        throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'User not found');
+    }
+    // Store old photo URLs for cleanup
+    const oldProfilePhoto = user.profilePhoto;
+    const oldCoverPhoto = user.coverPhoto;
+    // Prepare update data
+    const finalUpdateData = Object.assign({}, updateData);
+    // Handle profile photo upload
+    if ((files === null || files === void 0 ? void 0 : files.profilePhoto) && files.profilePhoto.length > 0) {
+        try {
+            const profilePhotoUrl = yield (0, s3Upload_1.uploadFileToS3)(files.profilePhoto[0], 'profile-photo');
+            finalUpdateData.profilePhoto = profilePhotoUrl;
+        }
+        catch (error) {
+            console.error('Failed to upload profile photo:', error);
+            throw new AppError_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, 'Failed to upload profile photo');
+        }
+    }
+    // Handle cover photo upload
+    if ((files === null || files === void 0 ? void 0 : files.coverPhoto) && files.coverPhoto.length > 0) {
+        try {
+            const coverPhotoUrl = yield (0, s3Upload_1.uploadFileToS3)(files.coverPhoto[0], 'cover-photo');
+            finalUpdateData.coverPhoto = coverPhotoUrl;
+        }
+        catch (error) {
+            console.error('Failed to upload cover photo:', error);
+            throw new AppError_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, 'Failed to upload cover photo');
+        }
+    }
+    // Update user profile
+    const updatedUser = yield prisma_1.default.user.update({
+        where: { email },
+        data: finalUpdateData,
+        select: {
+            id: true,
+            travelerNumber: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+            isActive: true,
+            aiCredits: true,
+            gender: true,
+            dateOfBirth: true,
+            phone: true,
+            address: true,
+            city: true,
+            state: true,
+            zip: true,
+            country: true,
+            profilePhoto: true,
+            coverPhoto: true,
+            isEmailVerified: true,
+            createdAt: true,
+            updatedAt: true,
+        },
+    });
+    // Clean up old photos AFTER successful update
+    if (finalUpdateData.profilePhoto && finalUpdateData.profilePhoto !== oldProfilePhoto && oldProfilePhoto) {
+        try {
+            yield (0, s3Upload_1.deleteFileFromS3)(oldProfilePhoto);
+            console.log('Successfully deleted old profile photo:', oldProfilePhoto);
+        }
+        catch (error) {
+            console.error('Failed to delete old profile photo:', error);
+        }
+    }
+    if (finalUpdateData.coverPhoto && finalUpdateData.coverPhoto !== oldCoverPhoto && oldCoverPhoto) {
+        try {
+            yield (0, s3Upload_1.deleteFileFromS3)(oldCoverPhoto);
+            console.log('Successfully deleted old cover photo:', oldCoverPhoto);
+        }
+        catch (error) {
+            console.error('Failed to delete old cover photo:', error);
         }
     }
     return updatedUser;
@@ -403,6 +487,7 @@ const updateUserRole = (userId, newRole) => __awaiter(void 0, void 0, void 0, fu
 exports.UserService = {
     getUserProfile,
     updateUserProfile,
+    updateUserProfileWithPhotos,
     changePassword,
     requestResetPasswordOtp,
     verifyResetPasswordOtp,

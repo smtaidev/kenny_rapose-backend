@@ -5,7 +5,9 @@ import { IUpdateUser } from '../../interface/user.interface';
 import bcrypt from 'bcrypt';
 import config from '../../../config';
 import { sendOtpEmail } from '../../utils/sendEmail';
-import { deletePhotoFromS3 } from '../../utils/s3Helper';
+import { uploadFileToS3, deleteFileFromS3 } from '../../utils/s3Upload';
+import { Request } from 'express';
+import multer from 'multer';
 
 //=====================Get User Profile=====================
 const getUserProfile = async (email: string) => {
@@ -89,7 +91,7 @@ const updateUserProfile = async (email: string, updateData: IUpdateUser) => {
   // Delete old photos from S3 AFTER successful profile update
   if (updateData.profilePhoto && updateData.profilePhoto !== oldProfilePhoto && oldProfilePhoto) {
     try {
-      await deletePhotoFromS3(oldProfilePhoto);
+      await deleteFileFromS3(oldProfilePhoto);
       console.log('Successfully deleted old profile photo:', oldProfilePhoto);
     } catch (error) {
       console.error('Failed to delete old profile photo:', error);
@@ -99,11 +101,108 @@ const updateUserProfile = async (email: string, updateData: IUpdateUser) => {
   
   if (updateData.coverPhoto && updateData.coverPhoto !== oldCoverPhoto && oldCoverPhoto) {
     try {
-      await deletePhotoFromS3(oldCoverPhoto);
+      await deleteFileFromS3(oldCoverPhoto);
       console.log('Successfully deleted old cover photo:', oldCoverPhoto);
     } catch (error) {
       console.error('Failed to delete old cover photo:', error);
       // Don't throw error - profile update was successful
+    }
+  }
+
+  return updatedUser;
+};
+
+//=====================Update User Profile with Photos=====================
+const updateUserProfileWithPhotos = async (
+  email: string, 
+  updateData: IUpdateUser,
+  files?: {
+    profilePhoto?: Express.Multer.File[];
+    coverPhoto?: Express.Multer.File[];
+  }
+) => {
+  const user = await prisma.user.findUnique({
+    where: { email, isActive: true },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  // Store old photo URLs for cleanup
+  const oldProfilePhoto = user.profilePhoto;
+  const oldCoverPhoto = user.coverPhoto;
+
+  // Prepare update data
+  const finalUpdateData = { ...updateData };
+
+  // Handle profile photo upload
+  if (files?.profilePhoto && files.profilePhoto.length > 0) {
+    try {
+      const profilePhotoUrl = await uploadFileToS3(files.profilePhoto[0], 'profile-photo');
+      finalUpdateData.profilePhoto = profilePhotoUrl;
+    } catch (error) {
+      console.error('Failed to upload profile photo:', error);
+      throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to upload profile photo');
+    }
+  }
+
+  // Handle cover photo upload
+  if (files?.coverPhoto && files.coverPhoto.length > 0) {
+    try {
+      const coverPhotoUrl = await uploadFileToS3(files.coverPhoto[0], 'cover-photo');
+      finalUpdateData.coverPhoto = coverPhotoUrl;
+    } catch (error) {
+      console.error('Failed to upload cover photo:', error);
+      throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to upload cover photo');
+    }
+  }
+
+  // Update user profile
+  const updatedUser = await prisma.user.update({
+    where: { email },
+    data: finalUpdateData,
+    select: {
+      id: true,
+      travelerNumber: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      role: true,
+      isActive: true,
+      aiCredits: true,
+      gender: true,
+      dateOfBirth: true,
+      phone: true,
+      address: true,
+      city: true,
+      state: true,
+      zip: true,
+      country: true,
+      profilePhoto: true,
+      coverPhoto: true,
+      isEmailVerified: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  // Clean up old photos AFTER successful update
+  if (finalUpdateData.profilePhoto && finalUpdateData.profilePhoto !== oldProfilePhoto && oldProfilePhoto) {
+    try {
+      await deleteFileFromS3(oldProfilePhoto);
+      console.log('Successfully deleted old profile photo:', oldProfilePhoto);
+    } catch (error) {
+      console.error('Failed to delete old profile photo:', error);
+    }
+  }
+  
+  if (finalUpdateData.coverPhoto && finalUpdateData.coverPhoto !== oldCoverPhoto && oldCoverPhoto) {
+    try {
+      await deleteFileFromS3(oldCoverPhoto);
+      console.log('Successfully deleted old cover photo:', oldCoverPhoto);
+    } catch (error) {
+      console.error('Failed to delete old cover photo:', error);
     }
   }
 
@@ -450,6 +549,7 @@ const updateUserRole = async (userId: string, newRole: string) => {
 export const UserService = {
   getUserProfile,
   updateUserProfile,
+  updateUserProfileWithPhotos,
   changePassword,
   requestResetPasswordOtp,
   verifyResetPasswordOtp,

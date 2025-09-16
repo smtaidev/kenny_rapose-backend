@@ -15,7 +15,6 @@ const tourBooking_route_1 = require("../modules/TourBooking/tourBooking.route");
 const admin_route_1 = require("../modules/Admin/admin.route");
 const userAssistance_route_1 = require("../modules/UserAssistance/userAssistance.route");
 const cancelRequest_route_1 = require("../modules/CancelRequest/cancelRequest.route");
-const upload_route_1 = require("../modules/Upload/upload.route");
 const cart_route_1 = require("../modules/Cart/cart.route");
 const subscription_route_1 = require("../modules/Subscription/subscription.route");
 const itinerary_routes_1 = require("../modules/itinerary/itinerary.routes");
@@ -64,10 +63,6 @@ const moduleRoutes = [
     {
         path: '/cancel-requests',
         route: cancelRequest_route_1.CancelRequestRoutes,
-    },
-    {
-        path: '/upload',
-        route: upload_route_1.UploadRoutes,
     },
     {
         path: '/cart',
