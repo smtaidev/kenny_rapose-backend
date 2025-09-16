@@ -27,6 +27,19 @@ const createCheckoutSessionSchema = z.object({
   }),
 });
 
+const createCustomWalletTopupSchema = z.object({
+  body: z.object({
+    amount: z.number()
+      .positive('Amount must be positive')
+      .min(5, 'Minimum topup amount is $5')
+      .max(1000, 'Maximum topup amount is $1000')
+      .multipleOf(0.01, 'Amount must have at most 2 decimal places'),
+    successUrl: z.string().url('Invalid success URL'),
+    cancelUrl: z.string().url('Invalid cancel URL'),
+  })
+});
+
 export const paymentValidation = {
   createCheckoutSessionSchema,
+  createCustomWalletTopupSchema,
 };

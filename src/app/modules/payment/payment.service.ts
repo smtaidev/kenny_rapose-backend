@@ -321,6 +321,48 @@ const handlePaymentSuccess = async (session: any): Promise<void> => {
           paymentId: session.payment_intent,
         },
       });
+    } else if (packageType === 'custom-wallet-topup') {
+      // Update breeze wallet purchase status for custom topup
+      await prisma.breezeWalletPurchase.updateMany({
+        where: {
+          payment: {
+            checkoutSessionId: session.id,
+          },
+        },
+        data: {
+          status: 'COMPLETED',
+        },
+      });
+
+      // Add amount to user's breeze wallet
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          breezeWalletBalance: {
+            increment: parseFloat(amount),
+          },
+        },
+      });
+
+      // Create user activity record
+      await UserActivityService.createUserActivity({
+        userId,
+        type: 'WALLET_TOPUP',
+        title: 'Custom Wallet Topup Successful',
+        message: `Custom Wallet Topup ($${amount}) added successfully`,
+        metadata: {
+          packageId,
+          amount,
+          paymentId: session.payment_intent,
+          isCustomTopup: true,
+        },
+      });
+
+      console.log('✅ Stripe Custom Wallet Topup processed successfully:', {
+        userId,
+        amountAdded: parseFloat(amount),
+        packageId,
+      });
     } else if (packageType === 'tour') {
       // Update tour booking status
       await prisma.tourBooking.updateMany({
@@ -682,9 +724,19 @@ const createPayPalOrder = async (
       }
     };
 
+    console.log('🔧 Creating PayPal order with request:', JSON.stringify(orderRequest, null, 2));
+    
     const result = await createPayPalOrderAPI(orderRequest);
     
+    console.log('🔧 PayPal Order Created:', {
+      orderId: result.id,
+      userId: userId,
+      amount: packageAmount,
+      packageType: packageType
+    });
+    
     // Create payment record in database
+    console.log('🔧 Creating payment record in database...');
     const payment = await prisma.payment.create({
       data: {
         userId,
@@ -707,6 +759,13 @@ const createPayPalOrder = async (
           } : {}),
         },
       },
+    });
+
+    console.log('✅ Payment record created successfully:', {
+      paymentId: payment.id,
+      externalPaymentId: payment.externalPaymentId,
+      amount: payment.amount,
+      status: payment.status
     });
 
     // Create appropriate purchase record (same as Stripe)
@@ -770,61 +829,122 @@ const createPayPalOrder = async (
 
 const handlePayPalWebhook = async (payload: IPayPalWebhook, headers: any): Promise<void> => {
   try {
+    console.log('🔔 PayPal Webhook Received:', {
+      timestamp: new Date().toISOString(),
+      eventType: payload.event_type,
+      resourceId: payload.resource?.id,
+      headers: {
+        'paypal-transmission-id': headers['paypal-transmission-id'],
+        'paypal-cert-id': headers['paypal-cert-id'],
+        'paypal-transmission-sig': headers['paypal-transmission-sig'] ? 'present' : 'missing'
+      }
+    });
+
     // Verify webhook signature
     const isValid = await verifyPayPalWebhook(payload, headers);
     if (!isValid) {
-      console.error('Invalid PayPal webhook signature');
+      console.error('❌ Invalid PayPal webhook signature');
       throw new Error('Invalid webhook signature');
     }
 
     const { event_type, resource } = payload;
-    console.log(`Processing PayPal webhook event: ${event_type}`);
+    console.log(`🔄 Processing PayPal webhook event: ${event_type}`);
 
     // Handle different PayPal events
     switch (event_type) {
       case 'PAYMENT.CAPTURE.COMPLETED':
-        await handlePaymentCompleted(resource);
+        console.log('✅ Payment Success Event Received');
+        await handlePaymentCompleted(resource, payload);
         break;
       
       case 'PAYMENT.CAPTURE.DENIED':
+        console.log('❌ Payment Denied Event Received');
         await handlePaymentDenied(resource);
         break;
       
       case 'PAYMENT.CAPTURE.REFUNDED':
+        console.log('🔄 Payment Refunded Event Received');
         await handlePaymentRefunded(resource);
         break;
       
       case 'CHECKOUT.ORDER.APPROVED':
+        console.log('✅ Order Approved Event Received');
         await handleOrderApproved(resource);
         break;
       
       case 'CHECKOUT.ORDER.VOIDED':
+        console.log('❌ Order Voided Event Received');
         await handleOrderVoided(resource);
         break;
       
       default:
-        console.log(`Unhandled PayPal webhook event: ${event_type}`);
+        console.log(`⚠️ Unhandled PayPal webhook event: ${event_type}`);
     }
+
+    console.log('✅ PayPal webhook processed successfully');
   } catch (error) {
-    console.error('PayPal webhook processing error:', error);
+    console.error('❌ PayPal webhook processing error:', error);
     throw error; // Re-throw to return 500 status
   }
 };
 
 // Handle successful payment
-const handlePaymentCompleted = async (resource: any): Promise<void> => {
+const handlePaymentCompleted = async (resource: any, fullPayload?: any): Promise<void> => {
   const captureId = resource.id;
-  console.log('Payment capture resource:', JSON.stringify(resource, null, 2));
+  console.log('💰 Payment Success Details:', {
+    captureId,
+    amount: resource.amount?.value,
+    currency: resource.amount?.currency_code,
+    status: resource.status,
+    timestamp: new Date().toISOString()
+  });
   
   // Find payment by external payment ID (order ID, not capture ID)
-  // The capture resource contains the order ID in the purchase_units
-  const orderId = resource.purchase_units?.[0]?.payments?.captures?.[0]?.supplementary_data?.related_id || 
-                  resource.supplementary_data?.related_id;
+  // For PAYMENT.CAPTURE.COMPLETED, we need to find the original order ID
+  // The order ID should be in supplementary_data.related_ids.order_id
+  let orderId = resource.supplementary_data?.related_ids?.order_id ||
+                resource.supplementary_data?.related_id || 
+                resource.purchase_units?.[0]?.payments?.captures?.[0]?.supplementary_data?.related_id ||
+                resource.purchase_units?.[0]?.reference_id ||
+                resource.custom_id;
   
-  console.log('Looking for order ID:', orderId);
+  console.log('🔍 Looking for order ID:', orderId);
+  console.log('🔍 Full resource structure:', JSON.stringify(resource, null, 2));
+  
+  // If we can't find the order ID, let's try to find the payment by amount and recent timestamp
+  if (!orderId) {
+    console.log('🔍 Order ID not found, trying to find payment by amount and recent timestamp...');
+    const amount = parseFloat(resource.amount?.value || '0');
+    const currency = resource.amount?.currency_code || 'USD';
+    
+    // Find recent pending payments with matching amount
+    const recentPayment = await prisma.payment.findFirst({
+      where: {
+        amount: amount,
+        currency: currency,
+        status: 'PENDING',
+        paymentMethod: 'PAYPAL',
+        createdAt: {
+          gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+    
+    if (recentPayment) {
+      orderId = recentPayment.externalPaymentId;
+      console.log('🔍 Found payment by amount match:', {
+        paymentId: recentPayment.id,
+        orderId: orderId,
+        amount: recentPayment.amount
+      });
+    }
+  }
   
   if (!orderId) {
-    console.error('Order ID not found in capture resource:', captureId);
+    console.error('❌ Order ID not found in capture resource:', captureId);
     return;
   }
   
@@ -833,19 +953,55 @@ const handlePaymentCompleted = async (resource: any): Promise<void> => {
   });
   
   if (!payment) {
-    console.error('Payment not found for PayPal order:', orderId);
+    console.error('❌ Payment not found for PayPal order:', orderId);
+    
+    // Debug: Let's see what payments exist in the database
+    const recentPayments = await prisma.payment.findMany({
+      where: {
+        paymentMethod: 'PAYPAL',
+        status: 'PENDING',
+        createdAt: {
+          gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
+        }
+      },
+      select: {
+        id: true,
+        externalPaymentId: true,
+        amount: true,
+        status: true,
+        createdAt: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      take: 5
+    });
+    
+    console.log('🔍 Recent PayPal payments in database:', recentPayments);
     return;
   }
+
+  console.log('✅ Payment found in database:', {
+    paymentId: payment.id,
+    userId: payment.userId,
+    amount: payment.amount,
+    status: payment.status,
+    packageType: (payment.metadata as any)?.packageType
+  });
   
   // Update payment status
   await prisma.payment.update({
     where: { id: payment.id },
     data: { status: 'SUCCEEDED' }
   });
+
+  console.log('✅ Payment status updated to SUCCEEDED');
   
   // Update related purchase records based on package type
   const metadata = payment.metadata as any;
   const packageType = metadata.packageType;
+  
+  console.log('📦 Processing package type:', packageType);
   
   if (packageType === 'ai-credit') {
     await prisma.creditPurchase.updateMany({
@@ -876,6 +1032,12 @@ const handlePaymentCompleted = async (resource: any): Promise<void> => {
         paymentId: payment.id,
       },
     });
+
+    console.log('✅ AI Credit Package processed successfully:', {
+      userId: payment.userId,
+      creditsAdded: metadata.credits,
+      packageId: metadata.packageId
+    });
   } else if (packageType === 'breeze-wallet') {
     await prisma.breezeWalletPurchase.updateMany({
       where: { paymentId: payment.id },
@@ -903,6 +1065,47 @@ const handlePaymentCompleted = async (resource: any): Promise<void> => {
         amount: metadata.amount,
         paymentId: payment.id,
       },
+    });
+
+    console.log('✅ Breeze Wallet Topup processed successfully:', {
+      userId: payment.userId,
+      amountAdded: metadata.amount,
+      packageId: metadata.packageId
+    });
+  } else if (packageType === 'custom-wallet-topup') {
+    await prisma.breezeWalletPurchase.updateMany({
+      where: { paymentId: payment.id },
+      data: { status: 'COMPLETED' }
+    });
+    
+    // Add to user's breeze wallet
+    await prisma.user.update({
+      where: { id: payment.userId },
+      data: { 
+        breezeWalletBalance: { 
+          increment: metadata.amount || 0 
+        } 
+      }
+    });
+
+    // Create user activity record
+    await UserActivityService.createUserActivity({
+      userId: payment.userId,
+      type: 'WALLET_TOPUP',
+      title: 'Custom Wallet Topup Successful',
+      message: `Custom Wallet Topup ($${metadata.amount}) added successfully`,
+      metadata: {
+        packageId: metadata.packageId,
+        amount: metadata.amount,
+        paymentId: payment.id,
+        isCustomTopup: true
+      },
+    });
+
+    console.log('✅ Custom Wallet Topup processed successfully:', {
+      userId: payment.userId,
+      amountAdded: metadata.amount,
+      packageId: metadata.packageId
     });
   } else if (packageType === 'tour') {
     await prisma.tourBooking.updateMany({
@@ -965,27 +1168,56 @@ const handlePaymentCompleted = async (resource: any): Promise<void> => {
         cashbackEarned: tourPackage?.breezeCredit ? (payment.amount * tourPackage.breezeCredit) / 100 : 0,
       },
     });
+
+    console.log('✅ Tour Package booking processed successfully:', {
+      userId: payment.userId,
+      packageId: metadata.packageId,
+      adults: metadata.adults || 0,
+      children: metadata.children || 0,
+      infants: metadata.infants || 0,
+      totalAmount: payment.amount,
+      cashbackEarned: tourPackage?.breezeCredit ? (payment.amount * tourPackage.breezeCredit) / 100 : 0
+    });
   }
+
+  console.log('🎉 Payment processing completed successfully for all package types');
 };
 
 // Handle failed payment
 const handlePaymentDenied = async (resource: any): Promise<void> => {
   const orderId = resource.id;
   
+  console.log('❌ Payment Denied Details:', {
+    orderId,
+    reason: resource.reason_code,
+    amount: resource.amount?.value,
+    currency: resource.amount?.currency_code,
+    timestamp: new Date().toISOString()
+  });
+  
   const payment = await prisma.payment.findFirst({
     where: { externalPaymentId: orderId }
   });
   
   if (!payment) {
-    console.error('Payment not found for PayPal order:', orderId);
+    console.error('❌ Payment not found for PayPal order:', orderId);
     return;
   }
+
+  console.log('✅ Payment found in database for denial:', {
+    paymentId: payment.id,
+    userId: payment.userId,
+    amount: payment.amount,
+    currentStatus: payment.status
+  });
   
   // Update payment status
   await prisma.payment.update({
     where: { id: payment.id },
     data: { status: 'FAILED' }
   });
+
+  console.log('❌ Payment status updated to FAILED');
   
   // Update related purchase records
   const metadata = payment.metadata as any;
@@ -1013,20 +1245,37 @@ const handlePaymentDenied = async (resource: any): Promise<void> => {
 const handlePaymentRefunded = async (resource: any): Promise<void> => {
   const orderId = resource.id;
   
+  console.log('🔄 Payment Refunded Details:', {
+    orderId,
+    refundAmount: resource.amount?.value,
+    currency: resource.amount?.currency_code,
+    refundId: resource.id,
+    timestamp: new Date().toISOString()
+  });
+  
   const payment = await prisma.payment.findFirst({
     where: { externalPaymentId: orderId }
   });
   
   if (!payment) {
-    console.error('Payment not found for PayPal order:', orderId);
+    console.error('❌ Payment not found for PayPal order:', orderId);
     return;
   }
+
+  console.log('✅ Payment found in database for refund:', {
+    paymentId: payment.id,
+    userId: payment.userId,
+    amount: payment.amount,
+    currentStatus: payment.status
+  });
   
   // Update payment status
   await prisma.payment.update({
     where: { id: payment.id },
     data: { status: 'CANCELED' }
   });
+
+  console.log('🔄 Payment status updated to CANCELED');
   
   // Update related purchase records
   const metadata = payment.metadata as any;

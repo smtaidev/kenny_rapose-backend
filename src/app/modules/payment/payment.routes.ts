@@ -3,6 +3,8 @@ import { PaymentController } from './payment.controller';
 import auth from '../../middlewares/auth';
 import validateRequest from '../../middlewares/validateRequest';
 import { paymentValidation } from './payment.validation';
+import customWalletTopupRoutes from './custom-wallet-topup.routes';
+import stripeCustomWalletTopupRoutes from './stripe-custom-wallet-topup.routes';
 
 const router = express.Router();
 
@@ -57,5 +59,9 @@ router.get(
   auth,
   PaymentController.getPaymentBySessionId
 );
+
+// Custom wallet topup routes
+router.use('/paypal', customWalletTopupRoutes);
+router.use('/stripe', stripeCustomWalletTopupRoutes);
 
 export const paymentRouter = router;

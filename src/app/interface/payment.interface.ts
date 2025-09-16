@@ -10,6 +10,12 @@ export interface ICreateCheckoutSession {
   travelDate?: string;
 }
 
+export interface ICustomWalletTopup {
+  amount: number;
+  successUrl: string;
+  cancelUrl: string;
+}
+
 export interface ICheckoutSessionResponse {
   sessionId: string;
   sessionUrl: string;

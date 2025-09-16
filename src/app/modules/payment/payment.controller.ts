@@ -102,8 +102,18 @@ const handlePayPalWebhook = catchAsync(async (req: any, res: Response) => {
   const payload = req.body;
   const headers = req.headers;
   
+  console.log('🎯 PayPal Webhook Controller - Request received:', {
+    timestamp: new Date().toISOString(),
+    ip: req.ip,
+    userAgent: req.get('User-Agent'),
+    contentType: req.get('Content-Type'),
+    eventType: payload?.event_type,
+    resourceId: payload?.resource?.id
+  });
+  
   await PaymentService.handlePayPalWebhook(payload, headers);
   
+  console.log('✅ PayPal Webhook Controller - Response sent successfully');
   res.json({ received: true });
 });
 

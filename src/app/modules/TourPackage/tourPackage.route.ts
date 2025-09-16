@@ -1,8 +1,15 @@
 import express from 'express';
 import { TourPackageController } from './tourPackage.controller';
 import validateRequest from '../../middlewares/validateRequest';
-import { createTourPackageZodSchema, updateTourPackageZodSchema } from './tourPackage.validation';
+import { 
+  createTourPackageZodSchema, 
+  updateTourPackageZodSchema,
+  createTourPackageWithPhotosZodSchema,
+  updateTourPackageWithPhotosZodSchema,
+  deletePhotosZodSchema
+} from './tourPackage.validation';
 import auth, { requireAdmin } from '../../middlewares/auth';
+import upload from '../../middlewares/upload';
 
 const router = express.Router();
 
@@ -23,6 +30,7 @@ router.post(
   '/',
   auth,
   requireAdmin,
+  upload.array('photos', 20), // Allow up to 20 photos
   validateRequest(createTourPackageZodSchema),
   TourPackageController.createTourPackage
 );
@@ -32,6 +40,7 @@ router.patch(
   '/:id',
   auth,
   requireAdmin,
+  upload.array('photos', 20), // Allow up to 20 photos
   validateRequest(updateTourPackageZodSchema),
   TourPackageController.updateTourPackage
 );
@@ -42,6 +51,35 @@ router.delete(
   auth,
   requireAdmin,
   TourPackageController.deleteTourPackage
+);
+
+//=====================Photo Management Routes (Admin Only)=====================
+
+// Upload additional photos to existing tour package
+router.post(
+  '/:id/photos',
+  auth,
+  requireAdmin,
+  upload.array('photos', 20), // Allow up to 20 photos
+  TourPackageController.uploadPhotos
+);
+
+// Replace all photos of tour package
+router.put(
+  '/:id/photos',
+  auth,
+  requireAdmin,
+  upload.array('photos', 20), // Allow up to 20 photos
+  TourPackageController.replacePhotos
+);
+
+// Delete specific photos from tour package
+router.delete(
+  '/:id/photos',
+  auth,
+  requireAdmin,
+  validateRequest(deletePhotosZodSchema),
+  TourPackageController.deletePhotos
 );
 
 export const TourPackageRoutes = router;

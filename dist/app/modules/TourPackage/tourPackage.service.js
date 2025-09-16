@@ -16,6 +16,7 @@ exports.TourPackageService = void 0;
 const prisma_1 = __importDefault(require("../../utils/prisma"));
 const AppError_1 = __importDefault(require("../../errors/AppError"));
 const http_status_1 = __importDefault(require("http-status"));
+const s3Upload_1 = require("../../utils/s3Upload");
 //=====================Create Tour Package=====================
 const createTourPackage = (packageData) => __awaiter(void 0, void 0, void 0, function* () {
     // Check if package with same name already exists
@@ -249,10 +250,238 @@ const getAllTourPackages = () => __awaiter(void 0, void 0, void 0, function* () 
     });
     return packages;
 });
+//=====================Photo Management Functions=====================
+// Upload multiple photos for tour package
+const uploadTourPackagePhotos = (tourPackageId, files) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // Verify tour package exists
+        const tourPackage = yield prisma_1.default.tourPackage.findUnique({
+            where: { id: tourPackageId },
+            select: { id: true, packageName: true, photos: true }
+        });
+        if (!tourPackage) {
+            throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'Tour package not found');
+        }
+        console.log(`🔧 Uploading ${files.length} photos for tour package: ${tourPackage.packageName}`);
+        // Upload all files to S3
+        const uploadPromises = files.map(file => (0, s3Upload_1.uploadFileToS3)(file, 'tour-package'));
+        const uploadedUrls = yield Promise.all(uploadPromises);
+        console.log(`✅ Successfully uploaded ${uploadedUrls.length} photos to S3`);
+        // Update tour package with new photos
+        const updatedPackage = yield prisma_1.default.tourPackage.update({
+            where: { id: tourPackageId },
+            data: {
+                photos: [...tourPackage.photos, ...uploadedUrls]
+            },
+            select: {
+                id: true,
+                packageName: true,
+                photos: true
+            }
+        });
+        console.log(`✅ Tour package photos updated. Total photos: ${updatedPackage.photos.length}`);
+        return uploadedUrls;
+    }
+    catch (error) {
+        console.error('❌ Tour package photo upload error:', error);
+        throw new AppError_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, 'Failed to upload tour package photos. Please try again.');
+    }
+});
+// Replace all photos for tour package
+const replaceTourPackagePhotos = (tourPackageId, files) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // Verify tour package exists
+        const tourPackage = yield prisma_1.default.tourPackage.findUnique({
+            where: { id: tourPackageId },
+            select: { id: true, packageName: true, photos: true }
+        });
+        if (!tourPackage) {
+            throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'Tour package not found');
+        }
+        console.log(`🔧 Replacing photos for tour package: ${tourPackage.packageName}`);
+        console.log(`🔧 Old photos count: ${tourPackage.photos.length}, New files count: ${files.length}`);
+        // Delete old photos from S3
+        if (tourPackage.photos.length > 0) {
+            console.log('🗑️ Deleting old photos from S3...');
+            const deletePromises = tourPackage.photos.map(photoUrl => (0, s3Upload_1.deleteFileFromS3)(photoUrl));
+            yield Promise.all(deletePromises);
+            console.log('✅ Old photos deleted from S3');
+        }
+        // Upload new files to S3
+        const uploadPromises = files.map(file => (0, s3Upload_1.uploadFileToS3)(file, 'tour-package'));
+        const uploadedUrls = yield Promise.all(uploadPromises);
+        console.log(`✅ Successfully uploaded ${uploadedUrls.length} new photos to S3`);
+        // Update tour package with new photos
+        const updatedPackage = yield prisma_1.default.tourPackage.update({
+            where: { id: tourPackageId },
+            data: {
+                photos: uploadedUrls
+            },
+            select: {
+                id: true,
+                packageName: true,
+                photos: true
+            }
+        });
+        console.log(`✅ Tour package photos replaced. New photos count: ${updatedPackage.photos.length}`);
+        return uploadedUrls;
+    }
+    catch (error) {
+        console.error('❌ Tour package photo replacement error:', error);
+        throw new AppError_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, 'Failed to replace tour package photos. Please try again.');
+    }
+});
+// Delete specific photos from tour package
+const deleteTourPackagePhotos = (tourPackageId, photoUrls) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // Verify tour package exists
+        const tourPackage = yield prisma_1.default.tourPackage.findUnique({
+            where: { id: tourPackageId },
+            select: { id: true, packageName: true, photos: true }
+        });
+        if (!tourPackage) {
+            throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'Tour package not found');
+        }
+        console.log(`🔧 Deleting ${photoUrls.length} photos from tour package: ${tourPackage.packageName}`);
+        // Delete photos from S3
+        const deletePromises = photoUrls.map(photoUrl => (0, s3Upload_1.deleteFileFromS3)(photoUrl));
+        yield Promise.all(deletePromises);
+        // Remove photos from database
+        const remainingPhotos = tourPackage.photos.filter(photo => !photoUrls.includes(photo));
+        yield prisma_1.default.tourPackage.update({
+            where: { id: tourPackageId },
+            data: {
+                photos: remainingPhotos
+            }
+        });
+        console.log(`✅ Successfully deleted ${photoUrls.length} photos. Remaining photos: ${remainingPhotos.length}`);
+    }
+    catch (error) {
+        console.error('❌ Tour package photo deletion error:', error);
+        throw new AppError_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, 'Failed to delete tour package photos. Please try again.');
+    }
+});
+// Create tour package with photos
+const createTourPackageWithPhotos = (packageData, files) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        console.log(`🔧 Creating tour package with ${files.length} photos`);
+        // Upload photos first
+        const uploadPromises = files.map(file => (0, s3Upload_1.uploadFileToS3)(file, 'tour-package'));
+        const uploadedUrls = yield Promise.all(uploadPromises);
+        // Create tour package with photo URLs
+        const newPackage = yield prisma_1.default.tourPackage.create({
+            data: Object.assign(Object.assign(Object.assign(Object.assign({}, packageData), { photos: uploadedUrls }), (packageData.startDay && { startDay: new Date(packageData.startDay) })), (packageData.endDay && { endDay: new Date(packageData.endDay) })),
+            select: {
+                id: true,
+                packageName: true,
+                about: true,
+                star: true,
+                packagePriceAdult: true,
+                packagePriceChild: true,
+                packageCategory: true,
+                ageRangeFrom: true,
+                ageRangeTo: true,
+                whatIncluded: true,
+                whatNotIncluded: true,
+                additionalInfo: true,
+                cancellationPolicy: true,
+                help: true,
+                breezeCredit: true,
+                // Legacy fields
+                totalMembers: true,
+                pricePerPerson: true,
+                startDay: true,
+                endDay: true,
+                citiesVisited: true,
+                tourType: true,
+                activities: true,
+                dailyActivity: true,
+                highlights: true,
+                description: true,
+                photos: true,
+                status: true,
+                createdAt: true,
+                updatedAt: true,
+            },
+        });
+        console.log(`✅ Tour package created successfully with ${uploadedUrls.length} photos`);
+        return newPackage;
+    }
+    catch (error) {
+        console.error('❌ Tour package creation with photos error:', error);
+        throw new AppError_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, 'Failed to create tour package with photos. Please try again.');
+    }
+});
+// Update tour package with photos
+const updateTourPackageWithPhotos = (id, updateData, files) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        console.log(`🔧 Updating tour package with ${files.length} new photos`);
+        // Get current tour package
+        const currentPackage = yield prisma_1.default.tourPackage.findUnique({
+            where: { id },
+            select: { id: true, packageName: true, photos: true }
+        });
+        if (!currentPackage) {
+            throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'Tour package not found');
+        }
+        // Upload new photos
+        const uploadPromises = files.map(file => (0, s3Upload_1.uploadFileToS3)(file, 'tour-package'));
+        const uploadedUrls = yield Promise.all(uploadPromises);
+        // Update tour package with new photos added to existing ones
+        const updatedPackage = yield prisma_1.default.tourPackage.update({
+            where: { id },
+            data: Object.assign(Object.assign(Object.assign(Object.assign({}, updateData), { photos: [...currentPackage.photos, ...uploadedUrls] }), (updateData.startDay && { startDay: new Date(updateData.startDay) })), (updateData.endDay && { endDay: new Date(updateData.endDay) })),
+            select: {
+                id: true,
+                packageName: true,
+                about: true,
+                star: true,
+                packagePriceAdult: true,
+                packagePriceChild: true,
+                packageCategory: true,
+                ageRangeFrom: true,
+                ageRangeTo: true,
+                whatIncluded: true,
+                whatNotIncluded: true,
+                additionalInfo: true,
+                cancellationPolicy: true,
+                help: true,
+                breezeCredit: true,
+                // Legacy fields
+                totalMembers: true,
+                pricePerPerson: true,
+                startDay: true,
+                endDay: true,
+                citiesVisited: true,
+                tourType: true,
+                activities: true,
+                dailyActivity: true,
+                highlights: true,
+                description: true,
+                photos: true,
+                status: true,
+                createdAt: true,
+                updatedAt: true,
+            },
+        });
+        console.log(`✅ Tour package updated successfully. Total photos: ${updatedPackage.photos.length}`);
+        return updatedPackage;
+    }
+    catch (error) {
+        console.error('❌ Tour package update with photos error:', error);
+        throw new AppError_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, 'Failed to update tour package with photos. Please try again.');
+    }
+});
 exports.TourPackageService = {
     createTourPackage,
     updateTourPackage,
     deleteTourPackage,
     getTourPackageById,
     getAllTourPackages,
+    // Photo management functions
+    uploadTourPackagePhotos,
+    replaceTourPackagePhotos,
+    deleteTourPackagePhotos,
+    createTourPackageWithPhotos,
+    updateTourPackageWithPhotos,
 };
