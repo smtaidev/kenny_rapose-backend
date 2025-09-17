@@ -93,15 +93,10 @@ model TourPackage {
   id                 String            @id @default(uuid())
   packageName        String
   totalMembers       Int?
-  pricePerPerson     Float?
   startDay           DateTime?
   endDay             DateTime?
-  citiesVisited      String[]
   tourType           String?
-  activities         String[]
   dailyActivity      Json?
-  highlights         String?
-  description        String?
   photos             String[]
   status             TourPackageStatus @default(ACTIVE)
   createdAt          DateTime          @default(now())
@@ -121,6 +116,8 @@ model TourPackage {
   packagePriceAdult  Float?
   packagePriceChild  Float?
   packagePriceInfant Float?
+  pickUp             String?
+  dropOff            String?
   tourBookings       TourBooking[]
   cart               Cart[]
 

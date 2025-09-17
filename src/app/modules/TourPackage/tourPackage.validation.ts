@@ -1,13 +1,12 @@
 import { z } from 'zod';
 
-// Daily activity validation schema
-const dailyActivitySchema = z.record(
-  z.string().regex(/^day\d+$/, 'Day key must be in format: day1, day2, day3, etc.'),
+// Daily activity validation schema - array format
+const dailyActivitySchema = z.array(
   z.object({
     title: z.string().min(1, 'Day title is required'),
     description: z.string().min(1, 'Day description is required'),
   })
-);
+).optional();
 
 export const createTourPackageZodSchema = z.object({
   body: z.object({
@@ -17,6 +16,8 @@ export const createTourPackageZodSchema = z.object({
     packagePriceAdult: z.number().positive('Adult package price must be positive').max(100000, 'Adult package price cannot exceed 100000').optional(),
     packagePriceChild: z.number().positive('Child package price must be positive').max(100000, 'Child package price cannot exceed 100000').optional(),
     packagePriceInfant: z.number().min(0, 'Infant package price must be 0 or higher').max(100000, 'Infant package price cannot exceed 100000').optional(),
+    pickUp: z.string().min(1, 'Pick up location is required').max(200, 'Pick up location too long').optional(),
+    dropOff: z.string().min(1, 'Drop off location is required').max(200, 'Drop off location too long').optional(),
     packageCategory: z.string().min(1, 'Package category is required').max(50, 'Package category too long'),
     ageRangeFrom: z.number().int('Age range from must be a whole number').min(0, 'Age range from must be 0 or higher').max(120, 'Age range from cannot exceed 120'),
     ageRangeTo: z.number().int('Age range to must be a whole number').min(0, 'Age range to must be 0 or higher').max(120, 'Age range to cannot exceed 120'),
@@ -29,15 +30,10 @@ export const createTourPackageZodSchema = z.object({
     
     // Legacy fields (optional for backward compatibility)
     totalMembers: z.number().int('Total members must be a whole number').positive('Total members must be positive').max(1000, 'Total members cannot exceed 1000').optional(),
-    pricePerPerson: z.number().positive('Price per person must be positive').max(10000, 'Price per person cannot exceed 10000').optional(),
     startDay: z.string().datetime('Start day must be a valid date').optional(),
     endDay: z.string().datetime('End day must be a valid date').optional(),
-    citiesVisited: z.array(z.string().min(1, 'City name cannot be empty')).min(1, 'At least one city must be specified').max(50, 'Cannot exceed 50 cities'),
     tourType: z.string().min(1, 'Tour type cannot be empty').max(50, 'Tour type too long').optional(),
-    activities: z.array(z.string().min(1, 'Activity cannot be empty')).min(1, 'At least one activity must be specified').max(100, 'Cannot exceed 100 activities'),
     dailyActivity: dailyActivitySchema.optional(),
-    highlights: z.string().min(1, 'Highlights cannot be empty').max(500, 'Highlights too long').optional(),
-    description: z.string().min(1, 'Description cannot be empty').max(2000, 'Description too long').optional(),
     photos: z.array(z.string().url('Photo must be a valid URL')).min(1, 'At least one photo is required').max(5, 'Cannot exceed 5 photos'),
     status: z.enum(['ACTIVE', 'INACTIVE']).optional().default('ACTIVE'),
   }).refine((data) => {
@@ -72,6 +68,8 @@ export const createTourPackageWithPhotosZodSchema = z.object({
     packagePriceAdult: z.number().positive('Adult package price must be positive').max(100000, 'Adult package price cannot exceed 100000').optional(),
     packagePriceChild: z.number().positive('Child package price must be positive').max(100000, 'Child package price cannot exceed 100000').optional(),
     packagePriceInfant: z.number().min(0, 'Infant package price must be 0 or higher').max(100000, 'Infant package price cannot exceed 100000').optional(),
+    pickUp: z.string().min(1, 'Pick up location is required').max(200, 'Pick up location too long').optional(),
+    dropOff: z.string().min(1, 'Drop off location is required').max(200, 'Drop off location too long').optional(),
     packageCategory: z.string().min(1, 'Package category is required').max(50, 'Package category too long'),
     ageRangeFrom: z.number().int('Age range from must be a whole number').min(0, 'Age range from must be 0 or higher').max(120, 'Age range from cannot exceed 120'),
     ageRangeTo: z.number().int('Age range to must be a whole number').min(0, 'Age range to must be 0 or higher').max(120, 'Age range to cannot exceed 120'),
@@ -84,15 +82,10 @@ export const createTourPackageWithPhotosZodSchema = z.object({
     
     // Legacy fields (optional for backward compatibility)
     totalMembers: z.number().int('Total members must be a whole number').positive('Total members must be positive').max(1000, 'Total members cannot exceed 1000').optional(),
-    pricePerPerson: z.number().positive('Price per person must be positive').max(10000, 'Price per person cannot exceed 10000').optional(),
     startDay: z.string().datetime('Start day must be a valid date').optional(),
     endDay: z.string().datetime('End day must be a valid date').optional(),
-    citiesVisited: z.array(z.string().min(1, 'City name cannot be empty')).min(1, 'At least one city must be specified').max(50, 'Cannot exceed 50 cities'),
     tourType: z.string().min(1, 'Tour type cannot be empty').max(50, 'Tour type too long').optional(),
-    activities: z.array(z.string().min(1, 'Activity cannot be empty')).min(1, 'At least one activity must be specified').max(100, 'Cannot exceed 100 activities'),
     dailyActivity: dailyActivitySchema.optional(),
-    highlights: z.string().min(1, 'Highlights cannot be empty').max(500, 'Highlights too long').optional(),
-    description: z.string().min(1, 'Description cannot be empty').max(2000, 'Description too long').optional(),
     status: z.enum(['ACTIVE', 'INACTIVE']).optional().default('ACTIVE'),
   }).refine((data) => {
     // Validate age range
@@ -125,6 +118,8 @@ export const updateTourPackageWithPhotosZodSchema = z.object({
     packagePriceAdult: z.number().positive('Adult package price must be positive').max(100000, 'Adult package price cannot exceed 100000').optional(),
     packagePriceChild: z.number().positive('Child package price must be positive').max(100000, 'Child package price cannot exceed 100000').optional(),
     packagePriceInfant: z.number().min(0, 'Infant package price must be 0 or higher').max(100000, 'Infant package price cannot exceed 100000').optional(),
+    pickUp: z.string().min(1, 'Pick up location is required').max(200, 'Pick up location too long').optional(),
+    dropOff: z.string().min(1, 'Drop off location is required').max(200, 'Drop off location too long').optional(),
     packageCategory: z.string().min(1, 'Package category cannot be empty').max(50, 'Package category too long').optional(),
     ageRangeFrom: z.number().int('Age range from must be a whole number').min(0, 'Age range from must be 0 or higher').max(120, 'Age range from cannot exceed 120').optional(),
     ageRangeTo: z.number().int('Age range to must be a whole number').min(0, 'Age range to must be 0 or higher').max(120, 'Age range to cannot exceed 120').optional(),
@@ -137,15 +132,10 @@ export const updateTourPackageWithPhotosZodSchema = z.object({
     
     // Legacy fields (optional for backward compatibility)
     totalMembers: z.number().int('Total members must be a whole number').positive('Total members must be positive').max(1000, 'Total members cannot exceed 1000').optional(),
-    pricePerPerson: z.number().positive('Price per person must be positive').max(10000, 'Price per person cannot exceed 10000').optional(),
     startDay: z.string().datetime('Start day must be a valid date').optional(),
     endDay: z.string().datetime('End day must be a valid date').optional(),
-    citiesVisited: z.array(z.string().min(1, 'City name cannot be empty')).min(1, 'At least one city must be specified').max(50, 'Cannot exceed 50 cities').optional(),
     tourType: z.string().min(1, 'Tour type cannot be empty').max(50, 'Tour type too long').optional(),
-    activities: z.array(z.string().min(1, 'Activity cannot be empty')).min(1, 'At least one activity must be specified').max(100, 'Cannot exceed 100 activities').optional(),
     dailyActivity: dailyActivitySchema.optional(),
-    highlights: z.string().min(1, 'Highlights cannot be empty').max(500, 'Highlights too long').optional(),
-    description: z.string().min(1, 'Description cannot be empty').max(2000, 'Description too long').optional(),
     status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
   }).refine((data) => {
     // Validate age range if both are provided
@@ -201,6 +191,8 @@ export const tourPackageDataSchema = z.object({
   packagePriceAdult: z.number().positive('Adult package price must be positive').max(100000, 'Adult package price cannot exceed 100000').optional(),
   packagePriceChild: z.number().positive('Child package price must be positive').max(100000, 'Child package price cannot exceed 100000').optional(),
   packagePriceInfant: z.number().min(0, 'Infant package price must be 0 or higher').max(100000, 'Infant package price cannot exceed 100000').optional(),
+  pickUp: z.string().min(1, 'Pick up location is required').max(200, 'Pick up location too long').optional(),
+  dropOff: z.string().min(1, 'Drop off location is required').max(200, 'Drop off location too long').optional(),
   packageCategory: z.string().min(1, 'Package category is required').max(50, 'Package category too long'),
   ageRangeFrom: z.number().int('Age range from must be a whole number').min(0, 'Age range from must be 0 or higher').max(120, 'Age range from cannot exceed 120'),
   ageRangeTo: z.number().int('Age range to must be a whole number').min(0, 'Age range to must be 0 or higher').max(120, 'Age range to cannot exceed 120'),
@@ -213,15 +205,10 @@ export const tourPackageDataSchema = z.object({
   
   // Legacy fields (optional for backward compatibility)
   totalMembers: z.number().int('Total members must be a whole number').positive('Total members must be positive').max(1000, 'Total members cannot exceed 1000').optional(),
-  pricePerPerson: z.number().positive('Price per person must be positive').max(10000, 'Price per person cannot exceed 10000').optional(),
   startDay: z.string().datetime('Start day must be a valid date').optional(),
   endDay: z.string().datetime('End day must be a valid date').optional(),
-  citiesVisited: z.array(z.string().min(1, 'City name cannot be empty')).min(1, 'At least one city must be specified').max(50, 'Cannot exceed 50 cities'),
   tourType: z.string().min(1, 'Tour type cannot be empty').max(50, 'Tour type too long').optional(),
-  activities: z.array(z.string().min(1, 'Activity cannot be empty')).min(1, 'At least one activity must be specified').max(100, 'Cannot exceed 100 activities'),
   dailyActivity: dailyActivitySchema.optional(),
-  highlights: z.string().min(1, 'Highlights cannot be empty').max(500, 'Highlights too long').optional(),
-  description: z.string().min(1, 'Description cannot be empty').max(2000, 'Description too long').optional(),
   photos: z.array(z.string().url('Photo must be a valid URL')).max(5, 'Cannot exceed 5 photos').optional().default([]), // Optional photos array - max 5
   status: z.enum(['ACTIVE', 'INACTIVE']).optional().default('ACTIVE'),
 }).refine((data) => {
@@ -254,6 +241,8 @@ export const tourPackageUpdateDataSchema = z.object({
   packagePriceAdult: z.number().positive('Adult package price must be positive').max(100000, 'Adult package price cannot exceed 100000').optional(),
   packagePriceChild: z.number().positive('Child package price must be positive').max(100000, 'Child package price cannot exceed 100000').optional(),
   packagePriceInfant: z.number().min(0, 'Infant package price must be 0 or higher').max(100000, 'Infant package price cannot exceed 100000').optional(),
+  pickUp: z.string().min(1, 'Pick up location is required').max(200, 'Pick up location too long').optional(),
+  dropOff: z.string().min(1, 'Drop off location is required').max(200, 'Drop off location too long').optional(),
   packageCategory: z.string().min(1, 'Package category cannot be empty').max(50, 'Package category too long').optional(),
   ageRangeFrom: z.number().int('Age range from must be a whole number').min(0, 'Age range from must be 0 or higher').max(120, 'Age range from cannot exceed 120').optional(),
   ageRangeTo: z.number().int('Age range to must be a whole number').min(0, 'Age range to must be 0 or higher').max(120, 'Age range to cannot exceed 120').optional(),
@@ -266,15 +255,10 @@ export const tourPackageUpdateDataSchema = z.object({
   
   // Legacy fields (optional for backward compatibility)
   totalMembers: z.number().int('Total members must be a whole number').positive('Total members must be positive').max(1000, 'Total members cannot exceed 1000').optional(),
-  pricePerPerson: z.number().positive('Price per person must be positive').max(10000, 'Price per person cannot exceed 10000').optional(),
   startDay: z.string().datetime('Start day must be a valid date').optional(),
   endDay: z.string().datetime('End day must be a valid date').optional(),
-  citiesVisited: z.array(z.string().min(1, 'City name cannot be empty')).min(1, 'At least one city must be specified').max(50, 'Cannot exceed 50 cities').optional(),
   tourType: z.string().min(1, 'Tour type cannot be empty').max(50, 'Tour type too long').optional(),
-  activities: z.array(z.string().min(1, 'Activity cannot be empty')).min(1, 'At least one activity must be specified').max(100, 'Cannot exceed 100 activities').optional(),
   dailyActivity: dailyActivitySchema.optional(),
-  highlights: z.string().min(1, 'Highlights cannot be empty').max(500, 'Highlights too long').optional(),
-  description: z.string().min(1, 'Description cannot be empty').max(2000, 'Description too long').optional(),
   status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
 }).refine((data) => {
   // Validate age range if both are provided
@@ -308,6 +292,8 @@ export const updateTourPackageZodSchema = z.object({
     packagePriceAdult: z.number().positive('Adult package price must be positive').max(100000, 'Adult package price cannot exceed 100000').optional(),
     packagePriceChild: z.number().positive('Child package price must be positive').max(100000, 'Child package price cannot exceed 100000').optional(),
     packagePriceInfant: z.number().min(0, 'Infant package price must be 0 or higher').max(100000, 'Infant package price cannot exceed 100000').optional(),
+    pickUp: z.string().min(1, 'Pick up location is required').max(200, 'Pick up location too long').optional(),
+    dropOff: z.string().min(1, 'Drop off location is required').max(200, 'Drop off location too long').optional(),
     packageCategory: z.string().min(1, 'Package category cannot be empty').max(50, 'Package category too long').optional(),
     ageRangeFrom: z.number().int('Age range from must be a whole number').min(0, 'Age range from must be 0 or higher').max(120, 'Age range from cannot exceed 120').optional(),
     ageRangeTo: z.number().int('Age range to must be a whole number').min(0, 'Age range to must be 0 or higher').max(120, 'Age range to cannot exceed 120').optional(),
@@ -320,15 +306,10 @@ export const updateTourPackageZodSchema = z.object({
     
     // Legacy fields (optional for backward compatibility)
     totalMembers: z.number().int('Total members must be a whole number').positive('Total members must be positive').max(1000, 'Total members cannot exceed 1000').optional(),
-    pricePerPerson: z.number().positive('Price per person must be positive').max(10000, 'Price per person cannot exceed 10000').optional(),
     startDay: z.string().datetime('Start day must be a valid date').optional(),
     endDay: z.string().datetime('End day must be a valid date').optional(),
-    citiesVisited: z.array(z.string().min(1, 'City name cannot be empty')).min(1, 'At least one city must be specified').max(50, 'Cannot exceed 50 cities').optional(),
     tourType: z.string().min(1, 'Tour type cannot be empty').max(50, 'Tour type too long').optional(),
-    activities: z.array(z.string().min(1, 'Activity cannot be empty')).min(1, 'At least one activity must be specified').max(100, 'Cannot exceed 100 activities').optional(),
     dailyActivity: dailyActivitySchema.optional(),
-    highlights: z.string().min(1, 'Highlights cannot be empty').max(500, 'Highlights too long').optional(),
-    description: z.string().min(1, 'Description cannot be empty').max(2000, 'Description too long').optional(),
     photos: z.array(z.string().url('Photo must be a valid URL')).min(1, 'At least one photo is required').max(5, 'Cannot exceed 5 photos').optional(),
     status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
   }).refine((data) => {

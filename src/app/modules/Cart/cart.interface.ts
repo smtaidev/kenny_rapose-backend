@@ -23,12 +23,10 @@ export interface ICartItem {
     packagePriceAdult: number | null;
     packagePriceChild: number | null;
     packagePriceInfant: number | null;
+    pickUp: string | null;
+    dropOff: string | null;
     photos: string[];
     star: number;
-    citiesVisited: string[];
-    activities: string[];
-    highlights: string | null;
-    description: string | null;
   };
 }
 

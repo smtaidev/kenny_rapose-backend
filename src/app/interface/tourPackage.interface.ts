@@ -1,11 +1,9 @@
 import { TourPackageStatus } from '../../../generated/prisma';
 
 export type IDailyActivity = {
-  [key: string]: {
-    title: string;
-    description: string;
-  };
-};
+  title: string;
+  description: string;
+}[];
 
 export type ITourPackage = {
   id: string;
@@ -15,6 +13,8 @@ export type ITourPackage = {
   packagePriceAdult?: number;
   packagePriceChild?: number;
   packagePriceInfant?: number;
+  pickUp?: string;
+  dropOff?: string;
   packageCategory: string;
   ageRangeFrom: number;
   ageRangeTo: number;
@@ -27,15 +27,10 @@ export type ITourPackage = {
   
   // Legacy fields (keeping for backward compatibility)
   totalMembers?: number;
-  pricePerPerson?: number;
   startDay?: Date;
   endDay?: Date;
-  citiesVisited: string[];
   tourType?: string;
-  activities: string[];
   dailyActivity?: IDailyActivity;
-  highlights?: string;
-  description?: string;
   photos: string[];
   status: TourPackageStatus;
   createdAt: Date;
@@ -50,6 +45,8 @@ export type ICreateTourPackage = {
   packagePriceAdult?: number;
   packagePriceChild?: number;
   packagePriceInfant?: number;
+  pickUp?: string;
+  dropOff?: string;
   packageCategory: string;
   ageRangeFrom: number;
   ageRangeTo: number;
@@ -62,15 +59,10 @@ export type ICreateTourPackage = {
   
   // Legacy fields (optional for backward compatibility)
   totalMembers?: number;
-  pricePerPerson?: number;
   startDay?: Date;
   endDay?: Date;
-  citiesVisited: string[];
   tourType?: string;
-  activities: string[];
   dailyActivity?: IDailyActivity;
-  highlights?: string;
-  description?: string;
   photos: string[];
   status?: TourPackageStatus;
 };
@@ -94,14 +86,10 @@ export type IUpdateTourPackage = {
   
   // Legacy fields (optional for backward compatibility)
   totalMembers?: number;
-  pricePerPerson?: number;
   startDay?: Date;
   endDay?: Date;
-  citiesVisited?: string[];
   tourType?: string;
-  activities?: string[];
   dailyActivity?: IDailyActivity;
-  highlights?: string;
   description?: string;
   photos?: string[];
   status?: TourPackageStatus;
@@ -115,6 +103,8 @@ export type ITourPackageResponse = {
   packagePriceAdult?: number;
   packagePriceChild?: number;
   packagePriceInfant?: number;
+  pickUp?: string;
+  dropOff?: string;
   packageCategory: string;
   ageRangeFrom: number;
   ageRangeTo: number;
@@ -134,8 +124,6 @@ export type ITourPackageResponse = {
   tourType?: string;
   activities: string[];
   dailyActivity?: IDailyActivity;
-  highlights?: string;
-  description?: string;
   photos: string[];
   status: TourPackageStatus;
   createdAt: Date;

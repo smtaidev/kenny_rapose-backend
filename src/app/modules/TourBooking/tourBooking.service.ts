@@ -23,6 +23,8 @@ const getUserTourBookings = async (userId: string, page = 1, limit = 20) => {
             packagePriceAdult: true,
             packagePriceChild: true,
             packagePriceInfant: true,
+            pickUp: true,
+            dropOff: true,
           },
         },
         cancelRequests: {
