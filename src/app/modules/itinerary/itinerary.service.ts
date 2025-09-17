@@ -18,10 +18,6 @@ const createItinerary = async (payload: ICreateItinerary): Promise<IItineraryRes
   try {
     // Prepare user info for storage
     const userInfo = {
-      userEmail: payload.userEmail,
-      userFirstName: payload.userFirstName,
-      userLastName: payload.userLastName,
-      goingWith: payload.goingWith,
       total_adults: payload.total_adults,
       total_children: payload.total_children,
       destination: payload.destination,
@@ -61,35 +57,55 @@ const createItinerary = async (payload: ICreateItinerary): Promise<IItineraryRes
     // Call AI endpoint
     const aiResponse = await callAIEndpoint(aiRequest);
 
-    // Add unique IDs to activities if AI response is successful
-    let processedAiResponse = aiResponse.data;
-    if (aiResponse.success && processedAiResponse.days) {
-      processedAiResponse = {
-        ...processedAiResponse,
-        itinerary_id: itinerary.id,
-        days: processedAiResponse.days.map((day: IDay) => ({
-          ...day,
-          activities: day.activities.map((activity: any) => ({
-            ...activity,
-            id: activity.id || uuidv4(),
-          })),
-        })),
+    if (!aiResponse.success) {
+      // Update itinerary with FAILED status
+      const failedItinerary = await prisma.itinerary.update({
+        where: { id: itinerary.id },
+        data: {
+          status: 'FAILED',
+        },
+      });
+
+      return {
+        id: failedItinerary.id,
+        itinerary_id: '',
+        days: [],
+        status: 'FAILED',
+        userInfo: userInfo,
+        createdAt: failedItinerary.createdAt,
+        updatedAt: failedItinerary.updatedAt,
       };
     }
+
+    // Process AI response data
+    const aiData = aiResponse.data;
+    const processedDays = aiData.days.map((day: IDay) => ({
+      ...day,
+      activities: day.activities.map((activity: any) => ({
+        ...activity,
+        id: activity.id || uuidv4(),
+      })),
+    }));
 
     // Update itinerary with AI response
     const updatedItinerary = await prisma.itinerary.update({
       where: { id: itinerary.id },
       data: {
-        aiResponse: processedAiResponse as any,
-        status: aiResponse.success ? 'COMPLETED' : 'FAILED',
+        aiResponse: {
+          itinerary_id: aiData.itinerary_id,
+          days: processedDays,
+          status: aiData.status,
+        },
+        status: 'COMPLETED',
       },
     });
 
     return {
       id: updatedItinerary.id,
-      aiResponse: updatedItinerary.aiResponse as any,
-      status: updatedItinerary.status as 'PENDING' | 'COMPLETED' | 'FAILED',
+      itinerary_id: aiData.itinerary_id,
+      days: processedDays,
+      status: 'COMPLETED',
+      userInfo: userInfo,
       createdAt: updatedItinerary.createdAt,
       updatedAt: updatedItinerary.updatedAt,
     };
@@ -111,10 +127,15 @@ const getItineraryById = async (id: string): Promise<IItineraryResponse> => {
     throw new AppError(httpStatus.NOT_FOUND, 'Itinerary not found');
   }
 
+  const aiResponse = itinerary.aiResponse as any;
+  const userInfo = itinerary.userInfo as any;
+
   return {
     id: itinerary.id,
-    aiResponse: itinerary.aiResponse as any,
+    itinerary_id: aiResponse?.itinerary_id || '',
+    days: aiResponse?.days || [],
     status: itinerary.status as 'PENDING' | 'COMPLETED' | 'FAILED',
+    userInfo: userInfo || {},
     createdAt: itinerary.createdAt,
     updatedAt: itinerary.updatedAt,
   };
@@ -125,13 +146,20 @@ const getAllItineraries = async (): Promise<IItineraryResponse[]> => {
     orderBy: { createdAt: 'desc' },
   });
 
-  return itineraries.map(itinerary => ({
-    id: itinerary.id,
-    aiResponse: itinerary.aiResponse as any,
-    status: itinerary.status as 'PENDING' | 'COMPLETED' | 'FAILED',
-    createdAt: itinerary.createdAt,
-    updatedAt: itinerary.updatedAt,
-  }));
+  return itineraries.map(itinerary => {
+    const aiResponse = itinerary.aiResponse as any;
+    const userInfo = itinerary.userInfo as any;
+
+    return {
+      id: itinerary.id,
+      itinerary_id: aiResponse?.itinerary_id || '',
+      days: aiResponse?.days || [],
+      status: itinerary.status as 'PENDING' | 'COMPLETED' | 'FAILED',
+      userInfo: userInfo || {},
+      createdAt: itinerary.createdAt,
+      updatedAt: itinerary.updatedAt,
+    };
+  });
 };
 
 const editActivity = async (payload: IEditActivityRequest) => {

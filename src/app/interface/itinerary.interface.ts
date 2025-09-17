@@ -1,8 +1,4 @@
 export interface ICreateItinerary {
-  userEmail: string;
-  userFirstName: string;
-  userLastName: string;
-  goingWith: string;
   total_adults: number;
   total_children: number;
   destination: string;
@@ -33,12 +29,22 @@ export interface IDay {
 
 export interface IItineraryResponse {
   id: string;
-  aiResponse: {
-    itinerary_id: string;
-    days: IDay[];
-    status: string;
-  };
+  itinerary_id: string;
+  days: IDay[];
   status: 'PENDING' | 'COMPLETED' | 'FAILED';
+  userInfo: {
+    total_adults: number;
+    total_children: number;
+    destination: string;
+    location: string;
+    departure_date: string;
+    return_date: string;
+    amenities: string[];
+    activities: string[];
+    pacing: string[];
+    food: string[];
+    special_note: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,12 +65,12 @@ export interface IAIRequest {
 
 export interface IAIResponse {
   success: boolean;
+  message: string;
   data: {
     itinerary_id: string;
     days: IDay[];
     status: string;
   };
-  message?: string;
 }
 
 export interface IEditActivityRequest {

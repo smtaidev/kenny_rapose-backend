@@ -4,6 +4,7 @@ import validateRequest from '../../middlewares/validateRequest';
 import auth, { requireSuperAdmin } from '../../middlewares/auth';
 import {
   updateUserProfileZodSchema,
+  updateUserProfileMixedZodSchema,
   requestOtpZodSchema,
   verifyOtpZodSchema,
   changePasswordZodSchema,
@@ -27,7 +28,7 @@ router.get('/:id', auth, requireAdmin, UserController.getUserById);
 //==============Update User Role (Admin Only)=================
 router.patch('/:id/role', auth, requireSuperAdmin, validateRequest(updateUserRoleZodSchema), UserController.updateUserRole);
 
-//==============Update Profile (Handles both JSON and multipart)==============
+//==============Update Profile - Mixed Approach (JSON data + photos as form data)==============
 router.patch(
   '/profile',
   auth,
@@ -35,6 +36,7 @@ router.patch(
     { name: 'profilePhoto', maxCount: 1 },
     { name: 'coverPhoto', maxCount: 1 }
   ]),
+  validateRequest(updateUserProfileMixedZodSchema), // JSON data validation
   UserController.updateUserProfile,
 );
 

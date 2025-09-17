@@ -21,7 +21,7 @@ const upload = multer({
   fileFilter: fileFilter,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
-    files: 2, // Maximum 2 files (profile photo and cover photo)
+    files: 5, // Maximum 5 files for tour packages
   },
 });
 

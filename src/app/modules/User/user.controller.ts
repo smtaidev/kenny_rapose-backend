@@ -6,6 +6,7 @@ import { IUserResponse, IUpdateUser } from '../../interface/user.interface';
 import httpStatus from 'http-status';
 import { AuthRequest } from '../../middlewares/auth';
 import AppError from '../../errors/AppError';
+import { userProfileDataSchema } from './user.validation';
 
 const getUserProfile = catchAsync(async (req: AuthRequest, res: Response) => {
   // If email is provided in params, use it; otherwise use authenticated user's email
@@ -28,6 +29,18 @@ const getUserProfile = catchAsync(async (req: AuthRequest, res: Response) => {
 const updateUserProfile = catchAsync(async (req: AuthRequest, res: Response) => {
   const { email } = req.user as { email: string };
   
+  // Parse JSON data from form data
+  const userProfileData = JSON.parse(req.body.data);
+  
+  // Validate the parsed JSON data
+  const validatedData = userProfileDataSchema.parse(userProfileData);
+  
+  // Convert to proper format for service
+  const serviceData = {
+    ...validatedData,
+    dateOfBirth: validatedData.dateOfBirth ? new Date(validatedData.dateOfBirth) : undefined,
+  };
+  
   // Check if request has files (multipart/form-data)
   const files = req.files as {
     profilePhoto?: Express.Multer.File[];
@@ -37,32 +50,26 @@ const updateUserProfile = catchAsync(async (req: AuthRequest, res: Response) => 
   let result;
   
   if (files && (files.profilePhoto || files.coverPhoto)) {
-    // Handle with photos - extract form data
-    const updateData: IUpdateUser = {
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
-      gender: req.body.gender,
-      dateOfBirth: req.body.dateOfBirth ? new Date(req.body.dateOfBirth) : undefined,
-      phone: req.body.phone,
-      address: req.body.address,
-      city: req.body.city,
-      state: req.body.state,
-      zip: req.body.zip,
-      country: req.body.country,
-    };
+    // Handle with photos
+    result = await UserService.updateUserProfileWithPhotos(email, serviceData, files);
     
-    result = await UserService.updateUserProfileWithPhotos(email, updateData, files);
+    sendResponse<IUserResponse>(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: 'User profile updated successfully with photos',
+      data: result,
+    });
   } else {
-    // Handle without photos - use req.body directly
-    result = await UserService.updateUserProfile(email, req.body);
-  }
+    // Handle without photos
+    result = await UserService.updateUserProfile(email, serviceData);
 
-  sendResponse<IUserResponse>(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'User profile updated successfully',
-    data: result,
-  });
+    sendResponse<IUserResponse>(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: 'User profile updated successfully',
+      data: result,
+    });
+  }
 });
 
 //=======================Change Password=======================

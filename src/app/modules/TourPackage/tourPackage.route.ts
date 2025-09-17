@@ -6,6 +6,8 @@ import {
   updateTourPackageZodSchema,
   createTourPackageWithPhotosZodSchema,
   updateTourPackageWithPhotosZodSchema,
+  createTourPackageMixedZodSchema,
+  updateTourPackageMixedZodSchema,
   deletePhotosZodSchema
 } from './tourPackage.validation';
 import auth, { requireAdmin } from '../../middlewares/auth';
@@ -25,23 +27,23 @@ router.get(
   TourPackageController.getTourPackageById
 );
 
-//=====================Create Tour Package (Admin Only)=====================
+//=====================Create Tour Package (Admin Only) - Mixed Approach=====================
 router.post(
   '/',
   auth,
   requireAdmin,
-  upload.array('photos', 20), // Allow up to 20 photos
-  validateRequest(createTourPackageZodSchema),
+  upload.array('photos', 5), // Photos as form data - max 5 photos
+  validateRequest(createTourPackageMixedZodSchema), // JSON data validation
   TourPackageController.createTourPackage
 );
 
-//=====================Update Tour Package (Admin Only)=====================
+//=====================Update Tour Package (Admin Only) - Mixed Approach=====================
 router.patch(
   '/:id',
   auth,
   requireAdmin,
-  upload.array('photos', 20), // Allow up to 20 photos
-  validateRequest(updateTourPackageZodSchema),
+  upload.array('photos', 5), // Photos as form data - max 5 photos
+  validateRequest(updateTourPackageMixedZodSchema), // JSON data validation
   TourPackageController.updateTourPackage
 );
 
@@ -60,7 +62,7 @@ router.post(
   '/:id/photos',
   auth,
   requireAdmin,
-  upload.array('photos', 20), // Allow up to 20 photos
+  upload.array('photos', 5), // Allow up to 5 photos
   TourPackageController.uploadPhotos
 );
 
@@ -69,7 +71,7 @@ router.put(
   '/:id/photos',
   auth,
   requireAdmin,
-  upload.array('photos', 20), // Allow up to 20 photos
+  upload.array('photos', 5), // Allow up to 5 photos
   TourPackageController.replacePhotos
 );
 

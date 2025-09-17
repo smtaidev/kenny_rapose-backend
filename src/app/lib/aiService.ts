@@ -1,11 +1,15 @@
 import axios from 'axios';
 import { IAIRequest, IAIResponse, IEditAIRequest, IEditAIResponse } from '../interface/itinerary.interface';
 
-const AI_ENDPOINT = 'http://206.162.244.131:9074/ai_suggestion';
-const AI_EDIT_ENDPOINT = 'http://206.162.244.131:9074/ai_edit_suggestion';
+const AI_ENDPOINT = process.env.AI_SUGGESTION_ENDPOINT || 'http://206.162.244.131:9074/ai_suggestion';
+const AI_EDIT_ENDPOINT = process.env.AI_EDIT_ENDPOINT || 'http://206.162.244.131:9074/ai_edit_suggestion';
 
 export const callAIEndpoint = async (data: IAIRequest): Promise<IAIResponse> => {
   try {
+    if (!AI_ENDPOINT) {
+      throw new Error('AI_SUGGESTION_ENDPOINT environment variable is not set');
+    }
+
     const response = await axios.post(AI_ENDPOINT, data, {
       headers: {
         'Content-Type': 'application/json',
@@ -15,8 +19,8 @@ export const callAIEndpoint = async (data: IAIRequest): Promise<IAIResponse> => 
 
     return {
       success: true,
-      data: response.data,
-      message: 'AI response received successfully',
+      data: response.data.data,
+      message: response.data.message || 'AI response received successfully',
     };
   } catch (error: any) {
     console.error('AI endpoint error:', error);
@@ -28,13 +32,17 @@ export const callAIEndpoint = async (data: IAIRequest): Promise<IAIResponse> => 
         days: [],
         status: 'FAILED',
       },
-      message: error.response?.data?.message || 'Failed to get AI response',
+      message: error.response?.data?.message || error.message || 'Failed to get AI response',
     };
   }
 };
 
 export const callAIEditEndpoint = async (data: IEditAIRequest): Promise<IEditAIResponse> => {
   try {
+    if (!AI_EDIT_ENDPOINT) {
+      throw new Error('AI_EDIT_ENDPOINT environment variable is not set');
+    }
+
     const response = await axios.post(AI_EDIT_ENDPOINT, data, {
       headers: {
         'Content-Type': 'application/json',
@@ -44,8 +52,8 @@ export const callAIEditEndpoint = async (data: IEditAIRequest): Promise<IEditAIR
 
     return {
       success: true,
-      data: response.data,
-      message: 'AI edit response received successfully',
+      data: response.data.data,
+      message: response.data.message || 'AI edit response received successfully',
     };
   } catch (error: any) {
     console.error('AI edit endpoint error:', error);
@@ -71,7 +79,7 @@ export const callAIEditEndpoint = async (data: IEditAIRequest): Promise<IEditAIR
           },
         ],
       },
-      message: error.response?.data?.message || 'Failed to get AI edit response',
+      message: error.response?.data?.message || error.message || 'Failed to get AI edit response',
     };
   }
 };

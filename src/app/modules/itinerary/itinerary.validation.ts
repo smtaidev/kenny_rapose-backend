@@ -2,10 +2,6 @@ import { z } from 'zod';
 
 const createItinerarySchema = z.object({
   body: z.object({
-    userEmail: z.string().email('Invalid email format'),
-    userFirstName: z.string().min(1, 'First name is required'),
-    userLastName: z.string().min(1, 'Last name is required'),
-    goingWith: z.string().min(1, 'Going with is required'),
     total_adults: z.number().int().min(1, 'At least 1 adult is required'),
     total_children: z.number().int().min(0, 'Children count cannot be negative'),
     destination: z.string().min(1, 'Destination is required'),

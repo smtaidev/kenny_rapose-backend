@@ -3,15 +3,30 @@ import catchAsync from '../../utils/catchAsync';
 import sendResponse from '../../utils/sendResponse';
 import { TourPackageService } from './tourPackage.service';
 import httpStatus from 'http-status';
+import { tourPackageDataSchema, tourPackageUpdateDataSchema } from './tourPackage.validation';
 
 //=====================Create Tour Package=====================
 const createTourPackage = catchAsync(async (req: Request, res: Response) => {
-  // Check if files are uploaded (multipart/form-data)
+  // Parse JSON data from form data
+  const tourPackageData = JSON.parse(req.body.data);
+  
+  // Validate the parsed JSON data
+  const validatedData = tourPackageDataSchema.parse(tourPackageData);
+  
+  // Convert to proper format for service
+  const serviceData = {
+    ...validatedData,
+    startDay: validatedData.startDay ? new Date(validatedData.startDay) : undefined,
+    endDay: validatedData.endDay ? new Date(validatedData.endDay) : undefined,
+    photos: validatedData.photos || []
+  };
+  
+  // Get uploaded files
   const files = req.files as Express.Multer.File[];
   
   if (files && files.length > 0) {
     // Create with photos
-    const result = await TourPackageService.createTourPackageWithPhotos(req.body, files);
+    const result = await TourPackageService.createTourPackageWithPhotos(serviceData, files);
     
     sendResponse(res, {
       statusCode: httpStatus.CREATED,
@@ -20,8 +35,8 @@ const createTourPackage = catchAsync(async (req: Request, res: Response) => {
       data: result,
     });
   } else {
-    // Create without photos (JSON only)
-    const result = await TourPackageService.createTourPackage(req.body);
+    // Create without photos
+    const result = await TourPackageService.createTourPackage(serviceData);
 
     sendResponse(res, {
       statusCode: httpStatus.CREATED,
@@ -35,11 +50,26 @@ const createTourPackage = catchAsync(async (req: Request, res: Response) => {
 //=====================Update Tour Package=====================
 const updateTourPackage = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
+  
+  // Parse JSON data from form data
+  const tourPackageData = JSON.parse(req.body.data);
+  
+  // Validate the parsed JSON data
+  const validatedData = tourPackageUpdateDataSchema.parse(tourPackageData);
+  
+  // Convert to proper format for service
+  const serviceData = {
+    ...validatedData,
+    startDay: validatedData.startDay ? new Date(validatedData.startDay) : undefined,
+    endDay: validatedData.endDay ? new Date(validatedData.endDay) : undefined,
+  };
+  
+  // Get uploaded files
   const files = req.files as Express.Multer.File[];
   
   if (files && files.length > 0) {
     // Update with photos
-    const result = await TourPackageService.updateTourPackageWithPhotos(id, req.body, files);
+    const result = await TourPackageService.updateTourPackageWithPhotos(id, serviceData, files);
     
     sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -48,8 +78,8 @@ const updateTourPackage = catchAsync(async (req: Request, res: Response) => {
       data: result,
     });
   } else {
-    // Update without photos (JSON only)
-    const result = await TourPackageService.updateTourPackage(id, req.body);
+    // Update without photos
+    const result = await TourPackageService.updateTourPackage(id, serviceData);
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
