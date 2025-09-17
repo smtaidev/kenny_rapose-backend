@@ -3,6 +3,8 @@ import { IAIRequest, IAIResponse, IEditAIRequest, IEditAIResponse } from '../int
 
 const AI_ENDPOINT = process.env.AI_SUGGESTION_ENDPOINT || 'http://206.162.244.131:9074/ai_suggestion';
 const AI_EDIT_ENDPOINT = process.env.AI_EDIT_ENDPOINT || 'http://206.162.244.131:9074/ai_edit_suggestion';
+const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS || 180000);
+const AI_EDIT_TIMEOUT_MS = Number(process.env.AI_EDIT_TIMEOUT_MS || 180000);
 
 export const callAIEndpoint = async (data: IAIRequest): Promise<IAIResponse> => {
   try {
@@ -14,7 +16,7 @@ export const callAIEndpoint = async (data: IAIRequest): Promise<IAIResponse> => 
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 30000, // 30 seconds timeout
+      timeout: AI_REQUEST_TIMEOUT_MS,
     });
 
     return {
@@ -47,7 +49,7 @@ export const callAIEditEndpoint = async (data: IEditAIRequest): Promise<IEditAIR
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 30000, // 30 seconds timeout
+      timeout: AI_EDIT_TIMEOUT_MS,
     });
 
     return {

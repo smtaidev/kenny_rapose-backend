@@ -440,9 +440,9 @@ const getTourPackageAnalytics = async (page = 1, limit = 10) => {
 
     // Calculate potential revenue based on pricing
     const totalPotentialRevenue = {
-      adults: totalBookings.adults * tourPackage.packagePriceAdult,
-      children: totalBookings.children * tourPackage.packagePriceChild,
-      infants: totalBookings.infants * tourPackage.packagePriceInfant,
+      adults: totalBookings.adults * (tourPackage.packagePriceAdult ?? 0),
+      children: totalBookings.children * (tourPackage.packagePriceChild ?? 0),
+      infants: totalBookings.infants * (tourPackage.packagePriceInfant ?? 0),
     };
 
     return {
@@ -453,9 +453,9 @@ const getTourPackageAnalytics = async (page = 1, limit = 10) => {
       isDeleted: tourPackage.deletedAt !== null, // Show if package is deleted
       deletedAt: tourPackage.deletedAt, // Show deletion date if deleted
       pricing: {
-        adult: tourPackage.packagePriceAdult,
-        child: tourPackage.packagePriceChild,
-        infant: tourPackage.packagePriceInfant,
+        adult: tourPackage.packagePriceAdult ?? 0,
+        child: tourPackage.packagePriceChild ?? 0,
+        infant: tourPackage.packagePriceInfant ?? 0,
       },
       totalEarnings: totalEarnings,
       pendingAmount: pendingAmount,

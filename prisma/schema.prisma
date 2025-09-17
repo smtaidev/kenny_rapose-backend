@@ -118,9 +118,9 @@ model TourPackage {
   whatIncluded       String[]
   whatNotIncluded    String[]
   packageCategory    String
-  packagePriceAdult  Float
-  packagePriceChild  Float
-  packagePriceInfant Float             @default(0)
+  packagePriceAdult  Float?
+  packagePriceChild  Float?
+  packagePriceInfant Float?
   tourBookings       TourBooking[]
   cart               Cart[]
 

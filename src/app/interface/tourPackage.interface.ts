@@ -12,8 +12,9 @@ export type ITourPackage = {
   packageName: string;
   about: string;
   star: number;
-  packagePriceAdult: number;
-  packagePriceChild: number;
+  packagePriceAdult?: number;
+  packagePriceChild?: number;
+  packagePriceInfant?: number;
   packageCategory: string;
   ageRangeFrom: number;
   ageRangeTo: number;
@@ -46,8 +47,9 @@ export type ICreateTourPackage = {
   packageName: string;
   about: string;
   star: number;
-  packagePriceAdult: number;
-  packagePriceChild: number;
+  packagePriceAdult?: number;
+  packagePriceChild?: number;
+  packagePriceInfant?: number;
   packageCategory: string;
   ageRangeFrom: number;
   ageRangeTo: number;
@@ -79,6 +81,7 @@ export type IUpdateTourPackage = {
   star?: number;
   packagePriceAdult?: number;
   packagePriceChild?: number;
+  packagePriceInfant?: number;
   packageCategory?: string;
   ageRangeFrom?: number;
   ageRangeTo?: number;
@@ -109,8 +112,9 @@ export type ITourPackageResponse = {
   packageName: string;
   about: string;
   star: number;
-  packagePriceAdult: number;
-  packagePriceChild: number;
+  packagePriceAdult?: number;
+  packagePriceChild?: number;
+  packagePriceInfant?: number;
   packageCategory: string;
   ageRangeFrom: number;
   ageRangeTo: number;

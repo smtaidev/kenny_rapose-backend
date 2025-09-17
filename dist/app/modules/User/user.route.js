@@ -53,11 +53,12 @@ router.get('/all', auth_1.default, auth_2.requireAdmin, user_controller_1.UserCo
 router.get('/:id', auth_1.default, auth_2.requireAdmin, user_controller_1.UserController.getUserById);
 //==============Update User Role (Admin Only)=================
 router.patch('/:id/role', auth_1.default, auth_1.requireSuperAdmin, (0, validateRequest_1.default)(user_validation_1.updateUserRoleZodSchema), user_controller_1.UserController.updateUserRole);
-//==============Update Profile (Handles both JSON and multipart)==============
+//==============Update Profile - Mixed Approach (JSON data + photos as form data)==============
 router.patch('/profile', auth_1.default, upload_1.default.fields([
     { name: 'profilePhoto', maxCount: 1 },
     { name: 'coverPhoto', maxCount: 1 }
-]), user_controller_1.UserController.updateUserProfile);
+]), (0, validateRequest_1.default)(user_validation_1.updateUserProfileMixedZodSchema), // JSON data validation
+user_controller_1.UserController.updateUserProfile);
 //===============Change Password==============
 router.post('/change-password', auth_1.default, // Add authentication middleware
 (0, validateRequest_1.default)(user_validation_1.changePasswordZodSchema), user_controller_1.UserController.changePassword);

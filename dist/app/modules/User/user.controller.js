@@ -18,6 +18,7 @@ const sendResponse_1 = __importDefault(require("../../utils/sendResponse"));
 const user_service_1 = require("./user.service");
 const http_status_1 = __importDefault(require("http-status"));
 const AppError_1 = __importDefault(require("../../errors/AppError"));
+const user_validation_1 = require("./user.validation");
 const getUserProfile = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     // If email is provided in params, use it; otherwise use authenticated user's email
@@ -37,35 +38,35 @@ const getUserProfile = (0, catchAsync_1.default)((req, res) => __awaiter(void 0,
 // =====================Update User Profile=====================
 const updateUserProfile = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { email } = req.user;
+    // Parse JSON data from form data
+    const userProfileData = JSON.parse(req.body.data);
+    // Validate the parsed JSON data
+    const validatedData = user_validation_1.userProfileDataSchema.parse(userProfileData);
+    // Convert to proper format for service
+    const serviceData = Object.assign(Object.assign({}, validatedData), { dateOfBirth: validatedData.dateOfBirth ? new Date(validatedData.dateOfBirth) : undefined });
     // Check if request has files (multipart/form-data)
     const files = req.files;
     let result;
     if (files && (files.profilePhoto || files.coverPhoto)) {
-        // Handle with photos - extract form data
-        const updateData = {
-            firstName: req.body.firstName,
-            lastName: req.body.lastName,
-            gender: req.body.gender,
-            dateOfBirth: req.body.dateOfBirth ? new Date(req.body.dateOfBirth) : undefined,
-            phone: req.body.phone,
-            address: req.body.address,
-            city: req.body.city,
-            state: req.body.state,
-            zip: req.body.zip,
-            country: req.body.country,
-        };
-        result = yield user_service_1.UserService.updateUserProfileWithPhotos(email, updateData, files);
+        // Handle with photos
+        result = yield user_service_1.UserService.updateUserProfileWithPhotos(email, serviceData, files);
+        (0, sendResponse_1.default)(res, {
+            statusCode: http_status_1.default.OK,
+            success: true,
+            message: 'User profile updated successfully with photos',
+            data: result,
+        });
     }
     else {
-        // Handle without photos - use req.body directly
-        result = yield user_service_1.UserService.updateUserProfile(email, req.body);
+        // Handle without photos
+        result = yield user_service_1.UserService.updateUserProfile(email, serviceData);
+        (0, sendResponse_1.default)(res, {
+            statusCode: http_status_1.default.OK,
+            success: true,
+            message: 'User profile updated successfully',
+            data: result,
+        });
     }
-    (0, sendResponse_1.default)(res, {
-        statusCode: http_status_1.default.OK,
-        success: true,
-        message: 'User profile updated successfully',
-        data: result,
-    });
 }));
 //=======================Change Password=======================
 const changePassword = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {

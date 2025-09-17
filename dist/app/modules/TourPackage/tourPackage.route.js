@@ -48,20 +48,22 @@ const router = express_1.default.Router();
 router.get('/', tourPackage_controller_1.TourPackageController.getAllTourPackages);
 //=====================Get Tour Package by ID (Public)=====================
 router.get('/:id', tourPackage_controller_1.TourPackageController.getTourPackageById);
-//=====================Create Tour Package (Admin Only)=====================
-router.post('/', auth_1.default, auth_1.requireAdmin, upload_1.default.array('photos', 20), // Allow up to 20 photos
-(0, validateRequest_1.default)(tourPackage_validation_1.createTourPackageZodSchema), tourPackage_controller_1.TourPackageController.createTourPackage);
-//=====================Update Tour Package (Admin Only)=====================
-router.patch('/:id', auth_1.default, auth_1.requireAdmin, upload_1.default.array('photos', 20), // Allow up to 20 photos
-(0, validateRequest_1.default)(tourPackage_validation_1.updateTourPackageZodSchema), tourPackage_controller_1.TourPackageController.updateTourPackage);
+//=====================Create Tour Package (Admin Only) - Mixed Approach=====================
+router.post('/', auth_1.default, auth_1.requireAdmin, upload_1.default.array('photos', 5), // Photos as form data - max 5 photos
+(0, validateRequest_1.default)(tourPackage_validation_1.createTourPackageMixedZodSchema), // JSON data validation
+tourPackage_controller_1.TourPackageController.createTourPackage);
+//=====================Update Tour Package (Admin Only) - Mixed Approach=====================
+router.patch('/:id', auth_1.default, auth_1.requireAdmin, upload_1.default.array('photos', 5), // Photos as form data - max 5 photos
+(0, validateRequest_1.default)(tourPackage_validation_1.updateTourPackageMixedZodSchema), // JSON data validation
+tourPackage_controller_1.TourPackageController.updateTourPackage);
 //=====================Delete Tour Package (Admin Only) - Soft Delete=====================
 router.delete('/:id', auth_1.default, auth_1.requireAdmin, tourPackage_controller_1.TourPackageController.deleteTourPackage);
 //=====================Photo Management Routes (Admin Only)=====================
 // Upload additional photos to existing tour package
-router.post('/:id/photos', auth_1.default, auth_1.requireAdmin, upload_1.default.array('photos', 20), // Allow up to 20 photos
+router.post('/:id/photos', auth_1.default, auth_1.requireAdmin, upload_1.default.array('photos', 5), // Allow up to 5 photos
 tourPackage_controller_1.TourPackageController.uploadPhotos);
 // Replace all photos of tour package
-router.put('/:id/photos', auth_1.default, auth_1.requireAdmin, upload_1.default.array('photos', 20), // Allow up to 20 photos
+router.put('/:id/photos', auth_1.default, auth_1.requireAdmin, upload_1.default.array('photos', 5), // Allow up to 5 photos
 tourPackage_controller_1.TourPackageController.replacePhotos);
 // Delete specific photos from tour package
 router.delete('/:id/photos', auth_1.default, auth_1.requireAdmin, (0, validateRequest_1.default)(tourPackage_validation_1.deletePhotosZodSchema), tourPackage_controller_1.TourPackageController.deletePhotos);

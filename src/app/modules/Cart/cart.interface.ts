@@ -20,9 +20,9 @@ export interface ICartItem {
     id: string;
     packageName: string;
     packageCategory: string;
-    packagePriceAdult: number;
-    packagePriceChild: number;
-    packagePriceInfant: number;
+    packagePriceAdult: number | null;
+    packagePriceChild: number | null;
+    packagePriceInfant: number | null;
     photos: string[];
     star: number;
     citiesVisited: string[];

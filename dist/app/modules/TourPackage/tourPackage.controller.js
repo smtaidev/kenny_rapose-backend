@@ -17,13 +17,20 @@ const catchAsync_1 = __importDefault(require("../../utils/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../utils/sendResponse"));
 const tourPackage_service_1 = require("./tourPackage.service");
 const http_status_1 = __importDefault(require("http-status"));
+const tourPackage_validation_1 = require("./tourPackage.validation");
 //=====================Create Tour Package=====================
 const createTourPackage = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    // Check if files are uploaded (multipart/form-data)
+    // Parse JSON data from form data
+    const tourPackageData = JSON.parse(req.body.data);
+    // Validate the parsed JSON data
+    const validatedData = tourPackage_validation_1.tourPackageDataSchema.parse(tourPackageData);
+    // Convert to proper format for service
+    const serviceData = Object.assign(Object.assign({}, validatedData), { startDay: validatedData.startDay ? new Date(validatedData.startDay) : undefined, endDay: validatedData.endDay ? new Date(validatedData.endDay) : undefined, photos: validatedData.photos || [] });
+    // Get uploaded files
     const files = req.files;
     if (files && files.length > 0) {
         // Create with photos
-        const result = yield tourPackage_service_1.TourPackageService.createTourPackageWithPhotos(req.body, files);
+        const result = yield tourPackage_service_1.TourPackageService.createTourPackageWithPhotos(serviceData, files);
         (0, sendResponse_1.default)(res, {
             statusCode: http_status_1.default.CREATED,
             success: true,
@@ -32,8 +39,8 @@ const createTourPackage = (0, catchAsync_1.default)((req, res) => __awaiter(void
         });
     }
     else {
-        // Create without photos (JSON only)
-        const result = yield tourPackage_service_1.TourPackageService.createTourPackage(req.body);
+        // Create without photos
+        const result = yield tourPackage_service_1.TourPackageService.createTourPackage(serviceData);
         (0, sendResponse_1.default)(res, {
             statusCode: http_status_1.default.CREATED,
             success: true,
@@ -45,10 +52,17 @@ const createTourPackage = (0, catchAsync_1.default)((req, res) => __awaiter(void
 //=====================Update Tour Package=====================
 const updateTourPackage = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.params;
+    // Parse JSON data from form data
+    const tourPackageData = JSON.parse(req.body.data);
+    // Validate the parsed JSON data
+    const validatedData = tourPackage_validation_1.tourPackageUpdateDataSchema.parse(tourPackageData);
+    // Convert to proper format for service
+    const serviceData = Object.assign(Object.assign({}, validatedData), { startDay: validatedData.startDay ? new Date(validatedData.startDay) : undefined, endDay: validatedData.endDay ? new Date(validatedData.endDay) : undefined });
+    // Get uploaded files
     const files = req.files;
     if (files && files.length > 0) {
         // Update with photos
-        const result = yield tourPackage_service_1.TourPackageService.updateTourPackageWithPhotos(id, req.body, files);
+        const result = yield tourPackage_service_1.TourPackageService.updateTourPackageWithPhotos(id, serviceData, files);
         (0, sendResponse_1.default)(res, {
             statusCode: http_status_1.default.OK,
             success: true,
@@ -57,8 +71,8 @@ const updateTourPackage = (0, catchAsync_1.default)((req, res) => __awaiter(void
         });
     }
     else {
-        // Update without photos (JSON only)
-        const result = yield tourPackage_service_1.TourPackageService.updateTourPackage(id, req.body);
+        // Update without photos
+        const result = yield tourPackage_service_1.TourPackageService.updateTourPackage(id, serviceData);
         (0, sendResponse_1.default)(res, {
             statusCode: http_status_1.default.OK,
             success: true,
