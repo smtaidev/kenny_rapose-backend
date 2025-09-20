@@ -8,15 +8,9 @@ const createCustomWalletTopup = async (req: AuthRequest, res: Response) => {
   const userId = req.user?.userId;
   const payload = req.body;
   
-  console.log('🎯 Custom Wallet Topup Controller - Request received:', {
-    userId,
-    amount: payload.amount,
-    timestamp: new Date().toISOString()
-  });
   
   const result = await CustomWalletTopupService.createCustomWalletTopup(userId!, payload);
 
-  console.log('✅ Custom Wallet Topup Controller - Order created successfully');
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

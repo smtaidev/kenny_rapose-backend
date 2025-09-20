@@ -12,12 +12,6 @@ const createCustomWalletTopup = async (
   try {
     const { amount, successUrl, cancelUrl } = payload;
 
-    console.log('🔧 Creating custom wallet topup:', {
-      userId,
-      amount,
-      successUrl,
-      cancelUrl
-    });
 
     // Check if PayPal is configured
     if (!process.env.PAYPAL_CLIENT_ID) {
@@ -69,19 +63,9 @@ const createCustomWalletTopup = async (
       }
     };
 
-    console.log('🔧 Creating PayPal order for custom wallet topup:', JSON.stringify(orderRequest, null, 2));
-    
     const result = await createPayPalOrderAPI(orderRequest);
     
-    console.log('🔧 PayPal Order Created for custom wallet topup:', {
-      orderId: result.id,
-      userId: userId,
-      amount: amount,
-      packageType: 'custom-wallet-topup'
-    });
-    
     // Create payment record in database
-    console.log('🔧 Creating payment record in database for custom wallet topup...');
     const payment = await prisma.payment.create({
       data: {
         userId,
@@ -99,12 +83,6 @@ const createCustomWalletTopup = async (
       },
     });
 
-    console.log('✅ Payment record created successfully for custom wallet topup:', {
-      paymentId: payment.id,
-      externalPaymentId: payment.externalPaymentId,
-      amount: payment.amount,
-      status: payment.status
-    });
 
     // Create or find a special package for custom topups
     let customTopupPackage = await prisma.breezeWalletPackage.findFirst({
@@ -134,7 +112,6 @@ const createCustomWalletTopup = async (
       },
     });
 
-    console.log('✅ Breeze wallet purchase record created for custom topup');
 
     // Find approval URL
     const approvalUrl = result.links?.find((link: any) => link.rel === 'approve')?.href;

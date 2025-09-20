@@ -60,6 +60,13 @@ router.get(
   PaymentController.getPaymentBySessionId
 );
 
+// Get payment details by PayPal order ID
+router.get(
+  '/paypal/order/:orderId',
+  auth,
+  PaymentController.getPaymentByPayPalOrderId
+);
+
 // Custom wallet topup routes
 router.use('/paypal', customWalletTopupRoutes);
 router.use('/stripe', stripeCustomWalletTopupRoutes);

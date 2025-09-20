@@ -10,15 +10,9 @@ const createStripeCustomWalletTopup = catchAsync(async (req: AuthRequest, res: R
   const userId = req.user?.userId;
   const payload: ICustomWalletTopup = req.body;
 
-  console.log('🎯 Stripe Custom Wallet Topup Controller - Request received:', {
-    userId,
-    amount: payload.amount,
-    timestamp: new Date().toISOString()
-  });
   
   const result = await StripeCustomWalletTopupService.createStripeCustomWalletTopup(userId!, payload);
 
-  console.log('✅ Stripe Custom Wallet Topup Controller - Session created successfully');
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,

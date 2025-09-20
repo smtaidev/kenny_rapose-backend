@@ -53,6 +53,8 @@ export interface ICreatePayPalOrder {
 export interface IPayPalOrderResponse {
   orderId: string;
   approvalUrl: string;
+  successUrl: string;
+  cancelUrl: string;
 }
 
 export interface IPayPalWebhook {

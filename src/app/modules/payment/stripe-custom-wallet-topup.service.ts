@@ -39,7 +39,6 @@ const createStripeCustomWalletTopup = async (
   }
 
   try {
-    console.log('🔧 Creating Stripe custom wallet topup:', { userId, amount, successUrl, cancelUrl });
 
     // Handle Stripe customer
     let customerId = user.stripeCustomerId;
@@ -94,15 +93,8 @@ const createStripeCustomWalletTopup = async (
       },
     });
 
-    console.log('🔧 Stripe Checkout Session Created for custom wallet topup:', {
-      sessionId: session.id,
-      userId: userId,
-      amount: amount,
-      packageType: 'custom-wallet-topup'
-    });
 
     // Create payment record in database
-    console.log('🔧 Creating payment record in database for Stripe custom wallet topup...');
     const payment = await prisma.payment.create({
       data: {
         userId,
@@ -120,12 +112,6 @@ const createStripeCustomWalletTopup = async (
       },
     });
 
-    console.log('✅ Payment record created successfully for Stripe custom wallet topup:', {
-      paymentId: payment.id,
-      externalPaymentId: payment.externalPaymentId,
-      amount: payment.amount,
-      status: payment.status
-    });
 
     // Create or find a special package for custom topups
     let customTopupPackage = await prisma.breezeWalletPackage.findFirst({
@@ -155,7 +141,6 @@ const createStripeCustomWalletTopup = async (
       },
     });
 
-    console.log('✅ Breeze wallet purchase record created for Stripe custom topup');
 
     return {
       sessionId: session.id,

@@ -83,6 +83,20 @@ const getPaymentBySessionId = catchAsync(async (req: AuthRequest, res: Response)
   });
 });
 
+const getPaymentByPayPalOrderId = catchAsync(async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.userId;
+  const { orderId } = req.params;
+  
+  const result = await PaymentService.getPaymentByPayPalOrderId(orderId, userId!);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'Payment details retrieved successfully',
+    data: result,
+  });
+});
+
 // PayPal controller methods
 const createPayPalOrder = catchAsync(async (req: AuthRequest, res: Response) => {
   const userId = req.user?.userId;
@@ -102,18 +116,9 @@ const handlePayPalWebhook = catchAsync(async (req: any, res: Response) => {
   const payload = req.body;
   const headers = req.headers;
   
-  console.log('🎯 PayPal Webhook Controller - Request received:', {
-    timestamp: new Date().toISOString(),
-    ip: req.ip,
-    userAgent: req.get('User-Agent'),
-    contentType: req.get('Content-Type'),
-    eventType: payload?.event_type,
-    resourceId: payload?.resource?.id
-  });
   
   await PaymentService.handlePayPalWebhook(payload, headers);
   
-  console.log('✅ PayPal Webhook Controller - Response sent successfully');
   res.json({ received: true });
 });
 
@@ -123,6 +128,7 @@ export const PaymentController = {
   getPaymentHistory,
   getPaymentById,
   getPaymentBySessionId,
+  getPaymentByPayPalOrderId,
   createPayPalOrder,
   handlePayPalWebhook,
 };
