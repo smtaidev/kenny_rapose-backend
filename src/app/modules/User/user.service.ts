@@ -1,13 +1,13 @@
-import prisma from '../../utils/prisma';
-import AppError from '../../errors/AppError';
-import httpStatus from 'http-status';
-import { IUpdateUser } from '../../interface/user.interface';
-import bcrypt from 'bcrypt';
-import config from '../../../config';
-import { sendOtpEmail } from '../../utils/sendEmail';
-import { uploadFileToS3, deleteFileFromS3 } from '../../utils/s3Upload';
-import { Request } from 'express';
-import multer from 'multer';
+import prisma from "../../utils/prisma";
+import AppError from "../../errors/AppError";
+import httpStatus from "http-status";
+import { IUpdateUser } from "../../interface/user.interface";
+import bcrypt from "bcrypt";
+import config from "../../../config";
+import { sendOtpEmail } from "../../utils/sendEmail";
+import { uploadFileToS3, deleteFileFromS3 } from "../../utils/s3Upload";
+import { Request } from "express";
+import multer from "multer";
 
 //=====================Get User Profile=====================
 const getUserProfile = async (email: string) => {
@@ -40,7 +40,7 @@ const getUserProfile = async (email: string) => {
   });
 
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
   }
 
   return user;
@@ -53,7 +53,7 @@ const updateUserProfile = async (email: string, updateData: IUpdateUser) => {
   });
 
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
   }
 
   // Store old photo URLs for cleanup after successful update
@@ -89,22 +89,30 @@ const updateUserProfile = async (email: string, updateData: IUpdateUser) => {
   });
 
   // Delete old photos from S3 AFTER successful profile update
-  if (updateData.profilePhoto && updateData.profilePhoto !== oldProfilePhoto && oldProfilePhoto) {
+  if (
+    updateData.profilePhoto &&
+    updateData.profilePhoto !== oldProfilePhoto &&
+    oldProfilePhoto
+  ) {
     try {
       await deleteFileFromS3(oldProfilePhoto);
-      console.log('Successfully deleted old profile photo:', oldProfilePhoto);
+      console.log("Successfully deleted old profile photo:", oldProfilePhoto);
     } catch (error) {
-      console.error('Failed to delete old profile photo:', error);
+      console.error("Failed to delete old profile photo:", error);
       // Don't throw error - profile update was successful
     }
   }
-  
-  if (updateData.coverPhoto && updateData.coverPhoto !== oldCoverPhoto && oldCoverPhoto) {
+
+  if (
+    updateData.coverPhoto &&
+    updateData.coverPhoto !== oldCoverPhoto &&
+    oldCoverPhoto
+  ) {
     try {
       await deleteFileFromS3(oldCoverPhoto);
-      console.log('Successfully deleted old cover photo:', oldCoverPhoto);
+      console.log("Successfully deleted old cover photo:", oldCoverPhoto);
     } catch (error) {
-      console.error('Failed to delete old cover photo:', error);
+      console.error("Failed to delete old cover photo:", error);
       // Don't throw error - profile update was successful
     }
   }
@@ -114,7 +122,7 @@ const updateUserProfile = async (email: string, updateData: IUpdateUser) => {
 
 //=====================Update User Profile with Photos=====================
 const updateUserProfileWithPhotos = async (
-  email: string, 
+  email: string,
   updateData: IUpdateUser,
   files?: {
     profilePhoto?: Express.Multer.File[];
@@ -126,7 +134,7 @@ const updateUserProfileWithPhotos = async (
   });
 
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
   }
 
   // Store old photo URLs for cleanup
@@ -139,22 +147,34 @@ const updateUserProfileWithPhotos = async (
   // Handle profile photo upload
   if (files?.profilePhoto && files.profilePhoto.length > 0) {
     try {
-      const profilePhotoUrl = await uploadFileToS3(files.profilePhoto[0], 'profile-photo');
+      const profilePhotoUrl = await uploadFileToS3(
+        files.profilePhoto[0],
+        "profile-photo"
+      );
       finalUpdateData.profilePhoto = profilePhotoUrl;
     } catch (error) {
-      console.error('Failed to upload profile photo:', error);
-      throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to upload profile photo');
+      console.error("Failed to upload profile photo:", error);
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        "Failed to upload profile photo"
+      );
     }
   }
 
   // Handle cover photo upload
   if (files?.coverPhoto && files.coverPhoto.length > 0) {
     try {
-      const coverPhotoUrl = await uploadFileToS3(files.coverPhoto[0], 'cover-photo');
+      const coverPhotoUrl = await uploadFileToS3(
+        files.coverPhoto[0],
+        "cover-photo"
+      );
       finalUpdateData.coverPhoto = coverPhotoUrl;
     } catch (error) {
-      console.error('Failed to upload cover photo:', error);
-      throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to upload cover photo');
+      console.error("Failed to upload cover photo:", error);
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        "Failed to upload cover photo"
+      );
     }
   }
 
@@ -188,62 +208,84 @@ const updateUserProfileWithPhotos = async (
   });
 
   // Clean up old photos AFTER successful update
-  if (finalUpdateData.profilePhoto && finalUpdateData.profilePhoto !== oldProfilePhoto && oldProfilePhoto) {
+  if (
+    finalUpdateData.profilePhoto &&
+    finalUpdateData.profilePhoto !== oldProfilePhoto &&
+    oldProfilePhoto
+  ) {
     try {
       await deleteFileFromS3(oldProfilePhoto);
-      console.log('Successfully deleted old profile photo:', oldProfilePhoto);
+      console.log("Successfully deleted old profile photo:", oldProfilePhoto);
     } catch (error) {
-      console.error('Failed to delete old profile photo:', error);
+      console.error("Failed to delete old profile photo:", error);
     }
   }
-  
-  if (finalUpdateData.coverPhoto && finalUpdateData.coverPhoto !== oldCoverPhoto && oldCoverPhoto) {
+
+  if (
+    finalUpdateData.coverPhoto &&
+    finalUpdateData.coverPhoto !== oldCoverPhoto &&
+    oldCoverPhoto
+  ) {
     try {
       await deleteFileFromS3(oldCoverPhoto);
-      console.log('Successfully deleted old cover photo:', oldCoverPhoto);
+      console.log("Successfully deleted old cover photo:", oldCoverPhoto);
     } catch (error) {
-      console.error('Failed to delete old cover photo:', error);
+      console.error("Failed to delete old cover photo:", error);
     }
   }
 
   return updatedUser;
 };
 
-
 //=====================Change Password=====================
-const changePassword = async (email: string, oldPassword: string, newPassword: string) => {
+const changePassword = async (
+  email: string,
+  oldPassword: string,
+  newPassword: string
+) => {
   const user = await prisma.user.findUnique({
     where: { email, isActive: true },
     select: { password: true },
   });
 
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  // Check if user has a password (not Google OAuth user)
+  if (!user.password) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Cannot change password for Google OAuth users"
+    );
   }
 
   // Use transaction for password change operations
   const result = await prisma.$transaction(async (tx) => {
     // Verify old password
-    const isOldPasswordValid = await bcrypt.compare(oldPassword, user.password);
+    const isOldPasswordValid = await bcrypt.compare(
+      oldPassword,
+      user.password!
+    );
     if (!isOldPasswordValid) {
-      throw new AppError(httpStatus.BAD_REQUEST, 'Old password is incorrect');
+      throw new AppError(httpStatus.BAD_REQUEST, "Old password is incorrect");
     }
 
     // Hash new password
     const hashedNewPassword = await bcrypt.hash(
       newPassword,
-      Number(config.bcrypt_salt_rounds),
+      Number(config.bcrypt_salt_rounds)
     );
 
     // Update password
     await tx.user.update({
       where: { email },
-      data: { 
+      data: {
         password: hashedNewPassword,
       },
     });
 
-    return { message: 'Password changed successfully' };
+    return { message: "Password changed successfully" };
   });
 
   return result;
@@ -256,7 +298,7 @@ const requestResetPasswordOtp = async (email: string) => {
   });
 
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
   }
 
   // Generate OTP
@@ -275,11 +317,13 @@ const requestResetPasswordOtp = async (email: string) => {
   // Send email with OTP
   try {
     await sendOtpEmail(email, otp);
-    return { message: 'OTP sent to your email' };
+    return { message: "OTP sent to your email" };
   } catch (error) {
     // If email fails, still return success but log the error
-    console.error('Failed to send OTP email:', error);
-    return { message: 'OTP generated but email delivery failed. Please try again.' };
+    console.error("Failed to send OTP email:", error);
+    return {
+      message: "OTP generated but email delivery failed. Please try again.",
+    };
   }
 };
 
@@ -294,7 +338,7 @@ const verifyResetPasswordOtp = async (email: string, otp: string) => {
   });
 
   if (!user) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid or expired OTP');
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid or expired OTP");
   }
 
   // Clear OTP after verification
@@ -306,7 +350,7 @@ const verifyResetPasswordOtp = async (email: string, otp: string) => {
     },
   });
 
-  return { message: 'OTP verified successfully' };
+  return { message: "OTP verified successfully" };
 };
 
 //=====================Reset Password=====================
@@ -316,7 +360,7 @@ const resetPassword = async (email: string, newPassword: string) => {
   });
 
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
   }
 
   // Use transaction for password reset operations
@@ -324,20 +368,20 @@ const resetPassword = async (email: string, newPassword: string) => {
     // Hash new password
     const hashedPassword = await bcrypt.hash(
       newPassword,
-      Number(config.bcrypt_salt_rounds),
+      Number(config.bcrypt_salt_rounds)
     );
 
     // Update password and clear any existing OTP within the same transaction
     await tx.user.update({
       where: { email },
-      data: { 
+      data: {
         password: hashedPassword,
         otp: null,
         otpExpiresAt: null,
       },
     });
 
-    return { message: 'Password reset successfully' };
+    return { message: "Password reset successfully" };
   });
 
   return result;
@@ -350,7 +394,7 @@ const resendOtp = async (email: string) => {
   });
 
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
   }
 
   // Generate new OTP
@@ -369,11 +413,13 @@ const resendOtp = async (email: string) => {
   // Send email with new OTP
   try {
     await sendOtpEmail(email, otp);
-    return { message: 'OTP resent to your email' };
+    return { message: "OTP resent to your email" };
   } catch (error) {
     // If email fails, still return success but log the error
-    console.error('Failed to send OTP email:', error);
-    return { message: 'OTP generated but email delivery failed. Please try again.' };
+    console.error("Failed to send OTP email:", error);
+    return {
+      message: "OTP generated but email delivery failed. Please try again.",
+    };
   }
 };
 
@@ -384,26 +430,26 @@ const softDeleteUser = async (email: string) => {
   });
 
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
   }
 
   // Soft delete
   await prisma.user.update({
     where: { email },
-    data: { 
+    data: {
       isActive: false,
       isDeleted: true,
       deletedAt: new Date(),
     },
   });
 
-  return { message: 'User soft deleted successfully' };
+  return { message: "User soft deleted successfully" };
 };
 
 //=====================Get All Users (Admin Only)=====================
 const getAllUsers = async (page = 1, limit = 20) => {
   const skip = (page - 1) * limit;
-  
+
   const [users, totalCount] = await Promise.all([
     prisma.user.findMany({
       skip,
@@ -432,13 +478,13 @@ const getAllUsers = async (page = 1, limit = 20) => {
         createdAt: true,
         updatedAt: true,
       },
-      orderBy: { createdAt: 'desc' }, // Newest first
+      orderBy: { createdAt: "desc" }, // Newest first
     }),
-    prisma.user.count()
+    prisma.user.count(),
   ]);
 
   // Add computed status field
-  const usersWithStatus = users.map(user => ({
+  const usersWithStatus = users.map((user) => ({
     ...user,
     status: {
       isActive: user.isActive,
@@ -494,7 +540,7 @@ const getUserById = async (userId: string) => {
   });
 
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
   }
 
   return user;
@@ -507,12 +553,12 @@ const updateUserRole = async (userId: string, newRole: string) => {
   });
 
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
   }
 
   // Validate role
-  if (!['USER', 'ADMIN', 'SUPER_ADMIN'].includes(newRole)) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid role');
+  if (!["USER", "ADMIN", "SUPER_ADMIN"].includes(newRole)) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid role");
   }
 
   const updatedUser = await prisma.user.update({

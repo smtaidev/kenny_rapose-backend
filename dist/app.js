@@ -15,7 +15,8 @@ const app = (0, express_1.default)();
 app.use((0, cors_1.default)({
     origin: [
         "http://localhost:3000",
-        "http://147.93.45.201:3000"
+        "http://147.93.45.201:3000",
+        "https://vacaybreeze.com",
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -23,7 +24,7 @@ app.use((0, cors_1.default)({
 }));
 // Exclude webhook route from global body parsing
 app.use((req, res, next) => {
-    if (req.path === '/api/v1/payments/webhook') {
+    if (req.path === "/api/v1/payments/webhook") {
         // Skip body parsing for webhook route
         next();
     }
@@ -33,7 +34,7 @@ app.use((req, res, next) => {
     }
 });
 app.use((req, res, next) => {
-    if (req.path === '/api/v1/payments/webhook') {
+    if (req.path === "/api/v1/payments/webhook") {
         // Skip URL encoding for webhook route
         next();
     }
@@ -48,7 +49,7 @@ app.get("/", (req, res) => {
         Message: "Kenny Rappose Server is running",
     });
 });
-app.use('/api/v1', routes_1.default);
+app.use("/api/v1", routes_1.default);
 // Global error handler - must be last
 app.use(globalErrorHandler_1.default);
 exports.default = app;

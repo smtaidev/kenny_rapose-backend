@@ -107,9 +107,38 @@ const logoutUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, voi
         data: result,
     });
 }));
+const googleSignIn = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { firebaseToken } = req.body;
+    const result = yield auth_service_1.AuthService.googleSignIn(firebaseToken);
+    // Set tokens in HttpOnly cookies
+    res.cookie("accessToken", result.accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    });
+    res.cookie("refreshToken", result.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+    // Return user data with tokens
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: "Google sign-in successful",
+        data: {
+            user: result.user,
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken,
+        },
+    });
+}));
 exports.AuthController = {
     createUser,
     loginUser,
     refreshToken,
     logoutUser,
+    googleSignIn,
 };

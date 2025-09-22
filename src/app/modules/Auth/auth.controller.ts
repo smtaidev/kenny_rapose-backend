@@ -112,9 +112,43 @@ const logoutUser = catchAsync(async (req: AuthRequest, res: Response) => {
   });
 });
 
+const googleSignIn = catchAsync(async (req: Request, res: Response) => {
+  const { firebaseToken } = req.body;
+
+  const result = await AuthService.googleSignIn(firebaseToken);
+
+  // Set tokens in HttpOnly cookies
+  res.cookie("accessToken", result.accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  });
+
+  res.cookie("refreshToken", result.refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+
+  // Return user data with tokens
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Google sign-in successful",
+    data: {
+      user: result.user,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    },
+  });
+});
+
 export const AuthController = {
   createUser,
   loginUser,
   refreshToken,
   logoutUser,
+  googleSignIn,
 };

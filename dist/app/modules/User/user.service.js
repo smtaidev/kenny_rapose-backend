@@ -50,7 +50,7 @@ const getUserProfile = (email) => __awaiter(void 0, void 0, void 0, function* ()
         },
     });
     if (!user) {
-        throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'User not found');
+        throw new AppError_1.default(http_status_1.default.NOT_FOUND, "User not found");
     }
     return user;
 });
@@ -60,7 +60,7 @@ const updateUserProfile = (email, updateData) => __awaiter(void 0, void 0, void 
         where: { email, isActive: true },
     });
     if (!user) {
-        throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'User not found');
+        throw new AppError_1.default(http_status_1.default.NOT_FOUND, "User not found");
     }
     // Store old photo URLs for cleanup after successful update
     const oldProfilePhoto = user.profilePhoto;
@@ -93,23 +93,27 @@ const updateUserProfile = (email, updateData) => __awaiter(void 0, void 0, void 
         },
     });
     // Delete old photos from S3 AFTER successful profile update
-    if (updateData.profilePhoto && updateData.profilePhoto !== oldProfilePhoto && oldProfilePhoto) {
+    if (updateData.profilePhoto &&
+        updateData.profilePhoto !== oldProfilePhoto &&
+        oldProfilePhoto) {
         try {
             yield (0, s3Upload_1.deleteFileFromS3)(oldProfilePhoto);
-            console.log('Successfully deleted old profile photo:', oldProfilePhoto);
+            console.log("Successfully deleted old profile photo:", oldProfilePhoto);
         }
         catch (error) {
-            console.error('Failed to delete old profile photo:', error);
+            console.error("Failed to delete old profile photo:", error);
             // Don't throw error - profile update was successful
         }
     }
-    if (updateData.coverPhoto && updateData.coverPhoto !== oldCoverPhoto && oldCoverPhoto) {
+    if (updateData.coverPhoto &&
+        updateData.coverPhoto !== oldCoverPhoto &&
+        oldCoverPhoto) {
         try {
             yield (0, s3Upload_1.deleteFileFromS3)(oldCoverPhoto);
-            console.log('Successfully deleted old cover photo:', oldCoverPhoto);
+            console.log("Successfully deleted old cover photo:", oldCoverPhoto);
         }
         catch (error) {
-            console.error('Failed to delete old cover photo:', error);
+            console.error("Failed to delete old cover photo:", error);
             // Don't throw error - profile update was successful
         }
     }
@@ -121,7 +125,7 @@ const updateUserProfileWithPhotos = (email, updateData, files) => __awaiter(void
         where: { email, isActive: true },
     });
     if (!user) {
-        throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'User not found');
+        throw new AppError_1.default(http_status_1.default.NOT_FOUND, "User not found");
     }
     // Store old photo URLs for cleanup
     const oldProfilePhoto = user.profilePhoto;
@@ -131,23 +135,23 @@ const updateUserProfileWithPhotos = (email, updateData, files) => __awaiter(void
     // Handle profile photo upload
     if ((files === null || files === void 0 ? void 0 : files.profilePhoto) && files.profilePhoto.length > 0) {
         try {
-            const profilePhotoUrl = yield (0, s3Upload_1.uploadFileToS3)(files.profilePhoto[0], 'profile-photo');
+            const profilePhotoUrl = yield (0, s3Upload_1.uploadFileToS3)(files.profilePhoto[0], "profile-photo");
             finalUpdateData.profilePhoto = profilePhotoUrl;
         }
         catch (error) {
-            console.error('Failed to upload profile photo:', error);
-            throw new AppError_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, 'Failed to upload profile photo');
+            console.error("Failed to upload profile photo:", error);
+            throw new AppError_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, "Failed to upload profile photo");
         }
     }
     // Handle cover photo upload
     if ((files === null || files === void 0 ? void 0 : files.coverPhoto) && files.coverPhoto.length > 0) {
         try {
-            const coverPhotoUrl = yield (0, s3Upload_1.uploadFileToS3)(files.coverPhoto[0], 'cover-photo');
+            const coverPhotoUrl = yield (0, s3Upload_1.uploadFileToS3)(files.coverPhoto[0], "cover-photo");
             finalUpdateData.coverPhoto = coverPhotoUrl;
         }
         catch (error) {
-            console.error('Failed to upload cover photo:', error);
-            throw new AppError_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, 'Failed to upload cover photo');
+            console.error("Failed to upload cover photo:", error);
+            throw new AppError_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, "Failed to upload cover photo");
         }
     }
     // Update user profile
@@ -179,22 +183,26 @@ const updateUserProfileWithPhotos = (email, updateData, files) => __awaiter(void
         },
     });
     // Clean up old photos AFTER successful update
-    if (finalUpdateData.profilePhoto && finalUpdateData.profilePhoto !== oldProfilePhoto && oldProfilePhoto) {
+    if (finalUpdateData.profilePhoto &&
+        finalUpdateData.profilePhoto !== oldProfilePhoto &&
+        oldProfilePhoto) {
         try {
             yield (0, s3Upload_1.deleteFileFromS3)(oldProfilePhoto);
-            console.log('Successfully deleted old profile photo:', oldProfilePhoto);
+            console.log("Successfully deleted old profile photo:", oldProfilePhoto);
         }
         catch (error) {
-            console.error('Failed to delete old profile photo:', error);
+            console.error("Failed to delete old profile photo:", error);
         }
     }
-    if (finalUpdateData.coverPhoto && finalUpdateData.coverPhoto !== oldCoverPhoto && oldCoverPhoto) {
+    if (finalUpdateData.coverPhoto &&
+        finalUpdateData.coverPhoto !== oldCoverPhoto &&
+        oldCoverPhoto) {
         try {
             yield (0, s3Upload_1.deleteFileFromS3)(oldCoverPhoto);
-            console.log('Successfully deleted old cover photo:', oldCoverPhoto);
+            console.log("Successfully deleted old cover photo:", oldCoverPhoto);
         }
         catch (error) {
-            console.error('Failed to delete old cover photo:', error);
+            console.error("Failed to delete old cover photo:", error);
         }
     }
     return updatedUser;
@@ -206,14 +214,18 @@ const changePassword = (email, oldPassword, newPassword) => __awaiter(void 0, vo
         select: { password: true },
     });
     if (!user) {
-        throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'User not found');
+        throw new AppError_1.default(http_status_1.default.NOT_FOUND, "User not found");
+    }
+    // Check if user has a password (not Google OAuth user)
+    if (!user.password) {
+        throw new AppError_1.default(http_status_1.default.BAD_REQUEST, "Cannot change password for Google OAuth users");
     }
     // Use transaction for password change operations
     const result = yield prisma_1.default.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
         // Verify old password
         const isOldPasswordValid = yield bcrypt_1.default.compare(oldPassword, user.password);
         if (!isOldPasswordValid) {
-            throw new AppError_1.default(http_status_1.default.BAD_REQUEST, 'Old password is incorrect');
+            throw new AppError_1.default(http_status_1.default.BAD_REQUEST, "Old password is incorrect");
         }
         // Hash new password
         const hashedNewPassword = yield bcrypt_1.default.hash(newPassword, Number(config_1.default.bcrypt_salt_rounds));
@@ -224,7 +236,7 @@ const changePassword = (email, oldPassword, newPassword) => __awaiter(void 0, vo
                 password: hashedNewPassword,
             },
         });
-        return { message: 'Password changed successfully' };
+        return { message: "Password changed successfully" };
     }));
     return result;
 });
@@ -234,7 +246,7 @@ const requestResetPasswordOtp = (email) => __awaiter(void 0, void 0, void 0, fun
         where: { email, isActive: true },
     });
     if (!user) {
-        throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'User not found');
+        throw new AppError_1.default(http_status_1.default.NOT_FOUND, "User not found");
     }
     // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -250,12 +262,14 @@ const requestResetPasswordOtp = (email) => __awaiter(void 0, void 0, void 0, fun
     // Send email with OTP
     try {
         yield (0, sendEmail_1.sendOtpEmail)(email, otp);
-        return { message: 'OTP sent to your email' };
+        return { message: "OTP sent to your email" };
     }
     catch (error) {
         // If email fails, still return success but log the error
-        console.error('Failed to send OTP email:', error);
-        return { message: 'OTP generated but email delivery failed. Please try again.' };
+        console.error("Failed to send OTP email:", error);
+        return {
+            message: "OTP generated but email delivery failed. Please try again.",
+        };
     }
 });
 //=====================Verify Reset Password OTP=====================
@@ -268,7 +282,7 @@ const verifyResetPasswordOtp = (email, otp) => __awaiter(void 0, void 0, void 0,
         },
     });
     if (!user) {
-        throw new AppError_1.default(http_status_1.default.BAD_REQUEST, 'Invalid or expired OTP');
+        throw new AppError_1.default(http_status_1.default.BAD_REQUEST, "Invalid or expired OTP");
     }
     // Clear OTP after verification
     yield prisma_1.default.user.update({
@@ -278,7 +292,7 @@ const verifyResetPasswordOtp = (email, otp) => __awaiter(void 0, void 0, void 0,
             otpExpiresAt: null,
         },
     });
-    return { message: 'OTP verified successfully' };
+    return { message: "OTP verified successfully" };
 });
 //=====================Reset Password=====================
 const resetPassword = (email, newPassword) => __awaiter(void 0, void 0, void 0, function* () {
@@ -286,7 +300,7 @@ const resetPassword = (email, newPassword) => __awaiter(void 0, void 0, void 0, 
         where: { email, isActive: true },
     });
     if (!user) {
-        throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'User not found');
+        throw new AppError_1.default(http_status_1.default.NOT_FOUND, "User not found");
     }
     // Use transaction for password reset operations
     const result = yield prisma_1.default.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
@@ -301,7 +315,7 @@ const resetPassword = (email, newPassword) => __awaiter(void 0, void 0, void 0, 
                 otpExpiresAt: null,
             },
         });
-        return { message: 'Password reset successfully' };
+        return { message: "Password reset successfully" };
     }));
     return result;
 });
@@ -311,7 +325,7 @@ const resendOtp = (email) => __awaiter(void 0, void 0, void 0, function* () {
         where: { email, isActive: true },
     });
     if (!user) {
-        throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'User not found');
+        throw new AppError_1.default(http_status_1.default.NOT_FOUND, "User not found");
     }
     // Generate new OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -327,12 +341,14 @@ const resendOtp = (email) => __awaiter(void 0, void 0, void 0, function* () {
     // Send email with new OTP
     try {
         yield (0, sendEmail_1.sendOtpEmail)(email, otp);
-        return { message: 'OTP resent to your email' };
+        return { message: "OTP resent to your email" };
     }
     catch (error) {
         // If email fails, still return success but log the error
-        console.error('Failed to send OTP email:', error);
-        return { message: 'OTP generated but email delivery failed. Please try again.' };
+        console.error("Failed to send OTP email:", error);
+        return {
+            message: "OTP generated but email delivery failed. Please try again.",
+        };
     }
 });
 //=====================Soft Delete User=====================
@@ -341,7 +357,7 @@ const softDeleteUser = (email) => __awaiter(void 0, void 0, void 0, function* ()
         where: { email, isActive: true },
     });
     if (!user) {
-        throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'User not found');
+        throw new AppError_1.default(http_status_1.default.NOT_FOUND, "User not found");
     }
     // Soft delete
     yield prisma_1.default.user.update({
@@ -352,7 +368,7 @@ const softDeleteUser = (email) => __awaiter(void 0, void 0, void 0, function* ()
             deletedAt: new Date(),
         },
     });
-    return { message: 'User soft deleted successfully' };
+    return { message: "User soft deleted successfully" };
 });
 //=====================Get All Users (Admin Only)=====================
 const getAllUsers = (...args_1) => __awaiter(void 0, [...args_1], void 0, function* (page = 1, limit = 20) {
@@ -385,12 +401,12 @@ const getAllUsers = (...args_1) => __awaiter(void 0, [...args_1], void 0, functi
                 createdAt: true,
                 updatedAt: true,
             },
-            orderBy: { createdAt: 'desc' }, // Newest first
+            orderBy: { createdAt: "desc" }, // Newest first
         }),
-        prisma_1.default.user.count()
+        prisma_1.default.user.count(),
     ]);
     // Add computed status field
-    const usersWithStatus = users.map(user => (Object.assign(Object.assign({}, user), { status: {
+    const usersWithStatus = users.map((user) => (Object.assign(Object.assign({}, user), { status: {
             isActive: user.isActive,
             isDeleted: user.deletedAt !== null,
             deletedAt: user.deletedAt,
@@ -439,7 +455,7 @@ const getUserById = (userId) => __awaiter(void 0, void 0, void 0, function* () {
         },
     });
     if (!user) {
-        throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'User not found');
+        throw new AppError_1.default(http_status_1.default.NOT_FOUND, "User not found");
     }
     return user;
 });
@@ -449,11 +465,11 @@ const updateUserRole = (userId, newRole) => __awaiter(void 0, void 0, void 0, fu
         where: { id: userId, isActive: true },
     });
     if (!user) {
-        throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'User not found');
+        throw new AppError_1.default(http_status_1.default.NOT_FOUND, "User not found");
     }
     // Validate role
-    if (!['USER', 'ADMIN', 'SUPER_ADMIN'].includes(newRole)) {
-        throw new AppError_1.default(http_status_1.default.BAD_REQUEST, 'Invalid role');
+    if (!["USER", "ADMIN", "SUPER_ADMIN"].includes(newRole)) {
+        throw new AppError_1.default(http_status_1.default.BAD_REQUEST, "Invalid role");
     }
     const updatedUser = yield prisma_1.default.user.update({
         where: { id: userId },

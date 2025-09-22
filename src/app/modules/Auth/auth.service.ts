@@ -1,13 +1,24 @@
-import bcrypt from 'bcrypt';
-import prisma from '../../utils/prisma';
-import { generateToken } from '../../utils/generateToken';
-import config from '../../../config';
-import { ICreateUser, ILoginUser } from '../../interface/user.interface';
-import AppError from '../../errors/AppError';
-import httpStatus from 'http-status';
-import jwt from 'jsonwebtoken';
-import { generateUniqueTravelerNumber } from '../../utils/generateTravelerNumber';
+import bcrypt from "bcrypt";
+import prisma from "../../utils/prisma";
+import { generateToken } from "../../utils/generateToken";
+import config from "../../../config";
+import { ICreateUser, ILoginUser } from "../../interface/user.interface";
+import AppError from "../../errors/AppError";
+import httpStatus from "http-status";
+import jwt from "jsonwebtoken";
+import { generateUniqueTravelerNumber } from "../../utils/generateTravelerNumber";
+import admin from "firebase-admin";
 
+// Initialize Firebase Admin SDK
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+    }),
+  });
+}
 
 //==================Create User or SignUp user===============
 const createUser = async (userData: ICreateUser) => {
@@ -20,12 +31,12 @@ const createUser = async (userData: ICreateUser) => {
 
   if (existingUser) {
     if (existingUser.isActive) {
-      throw new AppError(httpStatus.BAD_REQUEST, 'Email already registered');
+      throw new AppError(httpStatus.BAD_REQUEST, "Email already registered");
     } else {
       // Handle soft-deleted users - delete and allow re-registration
       const hashedPassword = await bcrypt.hash(
         password,
-        Number(config.bcrypt_salt_rounds),
+        Number(config.bcrypt_salt_rounds)
       );
 
       // Use transaction for reactivating user
@@ -102,7 +113,7 @@ const createUser = async (userData: ICreateUser) => {
   // Hash password
   const hashedPassword = await bcrypt.hash(
     password,
-    Number(config.bcrypt_salt_rounds),
+    Number(config.bcrypt_salt_rounds)
   );
 
   // Generate unique traveler number
@@ -169,7 +180,7 @@ const createUser = async (userData: ICreateUser) => {
   return result;
 };
 
-//=====================Loging User======================
+//=====================Login User======================
 const loginUser = async (loginData: ILoginUser) => {
   const { email, password } = loginData;
 
@@ -182,13 +193,17 @@ const loginUser = async (loginData: ILoginUser) => {
   });
 
   if (!user) {
-    throw new AppError(httpStatus.UNAUTHORIZED, 'Invalid email or password');
+    throw new AppError(httpStatus.UNAUTHORIZED, "Invalid email or password");
   }
 
   // Check password
+  if (!user.password) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Invalid email or password");
+  }
+
   const isPasswordValid = await bcrypt.compare(password, user.password);
   if (!isPasswordValid) {
-    throw new AppError(httpStatus.UNAUTHORIZED, 'Invalid email or password');
+    throw new AppError(httpStatus.UNAUTHORIZED, "Invalid email or password");
   }
 
   // Use transaction for login operations
@@ -235,7 +250,7 @@ const refreshToken = async (refreshToken: string) => {
     // Verify refresh token
     const decoded = jwt.verify(
       refreshToken,
-      config.jwt.refresh_secret as string,
+      config.jwt.refresh_secret as string
     ) as {
       userId: string;
       email: string;
@@ -252,7 +267,7 @@ const refreshToken = async (refreshToken: string) => {
     if (!user) {
       throw new AppError(
         httpStatus.UNAUTHORIZED,
-        'Invalid refresh token or account deactivated',
+        "Invalid refresh token or account deactivated"
       );
     }
 
@@ -283,7 +298,7 @@ const refreshToken = async (refreshToken: string) => {
 
     return result;
   } catch {
-    throw new AppError(httpStatus.UNAUTHORIZED, 'Invalid refresh token');
+    throw new AppError(httpStatus.UNAUTHORIZED, "Invalid refresh token");
   }
 };
 
@@ -294,7 +309,7 @@ const logoutUser = async (userId: string) => {
   });
 
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
   }
 
   // Clear refresh token for security
@@ -303,7 +318,122 @@ const logoutUser = async (userId: string) => {
     data: { refreshToken: null },
   });
 
-  return { message: 'Logged out successfully' };
+  return { message: "Logged out successfully" };
+};
+
+//=======================Firebase Google Sign In=====================
+const googleSignIn = async (firebaseToken: string) => {
+  try {
+    // Verify the Firebase ID token
+    const decodedToken = await admin.auth().verifyIdToken(firebaseToken);
+
+    const { email, name, picture, uid: firebaseUid } = decodedToken;
+
+    if (!email) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "Email not provided by Firebase"
+      );
+    }
+
+    // Extract first and last name from the name field
+    const nameParts = name ? name.split(" ") : ["User", "User"];
+    const firstName = nameParts[0] || "User";
+    const lastName = nameParts.slice(1).join(" ") || "User";
+
+    // Use transaction for Firebase sign-in operations
+    const result = await prisma.$transaction(async (tx) => {
+      // Check if user already exists
+      let user = await tx.user.findUnique({
+        where: { email },
+      });
+
+      if (user) {
+        // User exists - update Firebase UID and provider if not set
+        if (!user.googleId) {
+          user = await tx.user.update({
+            where: { id: user.id },
+            data: {
+              googleId: firebaseUid, // Store Firebase UID in googleId field
+              provider: "firebase",
+              isEmailVerified: true, // Firebase emails are verified
+              profilePhoto: picture || user.profilePhoto,
+            },
+          });
+        } else {
+          // User already has Firebase UID - just update profile photo if needed
+          if (picture && picture !== user.profilePhoto) {
+            user = await tx.user.update({
+              where: { id: user.id },
+              data: { profilePhoto: picture },
+            });
+          }
+        }
+      } else {
+        // Create new user with Firebase data
+        const travelerNumber = await generateUniqueTravelerNumber(tx);
+
+        user = await tx.user.create({
+          data: {
+            email,
+            firstName,
+            lastName,
+            googleId: firebaseUid, // Store Firebase UID in googleId field
+            provider: "firebase",
+            isEmailVerified: true,
+            profilePhoto: picture,
+            travelerNumber,
+            // Set default values for required fields
+            isActive: true,
+            aiCredits: 6,
+          },
+        });
+      }
+
+      // Generate tokens
+      const accessToken = generateToken.generateAccessToken({
+        userId: user.id,
+        email: user.email,
+      });
+
+      const refreshToken = generateToken.generateRefreshToken({
+        userId: user.id,
+        email: user.email,
+      });
+
+      // Store refresh token in database
+      await tx.user.update({
+        where: { id: user.id },
+        data: { refreshToken },
+      });
+
+      // Return only essential user data
+      const userResponse = {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        profilePhoto: user.profilePhoto,
+      };
+
+      return {
+        user: userResponse,
+        accessToken,
+        refreshToken,
+      };
+    });
+
+    return result;
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError(
+      httpStatus.UNAUTHORIZED,
+      "Firebase authentication failed"
+    );
+  }
 };
 
 export const AuthService = {
@@ -311,4 +441,5 @@ export const AuthService = {
   loginUser,
   refreshToken,
   logoutUser,
+  googleSignIn,
 };

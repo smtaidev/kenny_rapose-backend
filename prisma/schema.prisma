@@ -13,7 +13,7 @@ model User {
   firstName             String
   lastName              String
   email                 String                 @unique
-  password              String
+  password              String?
   phone                 String?
   address               String?
   city                  String?
@@ -41,6 +41,8 @@ model User {
   stripeCustomerId      String?
   profilePhoto          String?
   coverPhoto            String?
+  googleId              String?                @unique
+  provider              String?                // "google" or "email"
   breezeWalletPurchases BreezeWalletPurchase[]
   creditPurchases       CreditPurchase[]
   payments              Payment[]

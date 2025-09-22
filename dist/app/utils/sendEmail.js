@@ -16,21 +16,21 @@ exports.sendOtpEmail = sendOtpEmail;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const config_1 = __importDefault(require("../../config"));
 const transporter = nodemailer_1.default.createTransport({
-    host: 'smtp-relay.brevo.com',
+    host: "smtp.gmail.com",
     port: 587,
-    secure: false,
+    secure: false, // true for 465, false for other ports
     auth: {
-        user: config_1.default.brevo_user,
-        pass: config_1.default.brevo_api_key,
+        user: config_1.default.gmail_user,
+        pass: config_1.default.gmail_app_password,
     },
 });
 function sendOtpEmail(to, otp) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             yield transporter.sendMail({
-                from: config_1.default.brevo_sender_email,
+                from: config_1.default.gmail_sender_email,
                 to,
-                subject: 'Your OTP Code',
+                subject: "Your OTP Code",
                 text: `Your OTP code is: ${otp}. This code will expire in 5 minutes.`,
                 html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #333;">Your OTP Code</h2>
@@ -42,8 +42,8 @@ function sendOtpEmail(to, otp) {
             });
         }
         catch (error) {
-            console.error('Email sending failed:', error);
-            throw new Error('Failed to send OTP email');
+            console.error("Email sending failed:", error);
+            throw new Error("Failed to send OTP email");
         }
     });
 }
