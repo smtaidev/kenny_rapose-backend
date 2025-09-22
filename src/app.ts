@@ -14,7 +14,8 @@ app.use(
   cors({
     origin: [
       "http://localhost:3000",
-      "http://147.93.45.201:3000"
+      "http://147.93.45.201:3000",
+      "https://vacaybreeze.com",
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -24,7 +25,7 @@ app.use(
 
 // Exclude webhook route from global body parsing
 app.use((req, res, next) => {
-  if (req.path === '/api/v1/payments/webhook') {
+  if (req.path === "/api/v1/payments/webhook") {
     // Skip body parsing for webhook route
     next();
   } else {
@@ -34,7 +35,7 @@ app.use((req, res, next) => {
 });
 
 app.use((req, res, next) => {
-  if (req.path === '/api/v1/payments/webhook') {
+  if (req.path === "/api/v1/payments/webhook") {
     // Skip URL encoding for webhook route
     next();
   } else {
@@ -51,7 +52,7 @@ app.get("/", (req, res) => {
   });
 });
 
-app.use('/api/v1', router);
+app.use("/api/v1", router);
 
 // Global error handler - must be last
 app.use(globalErrorHandler);
