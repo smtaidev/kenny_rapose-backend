@@ -9,15 +9,24 @@ import jwt from "jsonwebtoken";
 import { generateUniqueTravelerNumber } from "../../utils/generateTravelerNumber";
 import admin from "firebase-admin";
 
-// Initialize Firebase Admin SDK
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    }),
-  });
+// Initialize Firebase Admin SDK (only if credentials are provided)
+if (
+  !admin.apps.length &&
+  process.env.FIREBASE_PROJECT_ID &&
+  process.env.FIREBASE_CLIENT_EMAIL &&
+  process.env.FIREBASE_PRIVATE_KEY
+) {
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      }),
+    });
+  } catch (error) {
+    console.warn("Firebase Admin SDK initialization failed:", error);
+  }
 }
 
 //==================Create User or SignUp user===============
@@ -324,6 +333,14 @@ const logoutUser = async (userId: string) => {
 //=======================Firebase Google Sign In=====================
 const googleSignIn = async (firebaseToken: string) => {
   try {
+    // Check if Firebase is initialized
+    if (!admin.apps.length) {
+      throw new AppError(
+        httpStatus.SERVICE_UNAVAILABLE,
+        "Firebase authentication is not configured"
+      );
+    }
+
     // Verify the Firebase ID token
     const decodedToken = await admin.auth().verifyIdToken(firebaseToken);
 

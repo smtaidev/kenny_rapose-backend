@@ -23,15 +23,23 @@ const http_status_1 = __importDefault(require("http-status"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const generateTravelerNumber_1 = require("../../utils/generateTravelerNumber");
 const firebase_admin_1 = __importDefault(require("firebase-admin"));
-// Initialize Firebase Admin SDK
-if (!firebase_admin_1.default.apps.length) {
-    firebase_admin_1.default.initializeApp({
-        credential: firebase_admin_1.default.credential.cert({
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-            privateKey: (_a = process.env.FIREBASE_PRIVATE_KEY) === null || _a === void 0 ? void 0 : _a.replace(/\\n/g, "\n"),
-        }),
-    });
+// Initialize Firebase Admin SDK (only if credentials are provided)
+if (!firebase_admin_1.default.apps.length &&
+    process.env.FIREBASE_PROJECT_ID &&
+    process.env.FIREBASE_CLIENT_EMAIL &&
+    process.env.FIREBASE_PRIVATE_KEY) {
+    try {
+        firebase_admin_1.default.initializeApp({
+            credential: firebase_admin_1.default.credential.cert({
+                projectId: process.env.FIREBASE_PROJECT_ID,
+                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                privateKey: (_a = process.env.FIREBASE_PRIVATE_KEY) === null || _a === void 0 ? void 0 : _a.replace(/\\n/g, "\n"),
+            }),
+        });
+    }
+    catch (error) {
+        console.warn("Firebase Admin SDK initialization failed:", error);
+    }
 }
 //==================Create User or SignUp user===============
 const createUser = (userData) => __awaiter(void 0, void 0, void 0, function* () {
@@ -280,6 +288,10 @@ const logoutUser = (userId) => __awaiter(void 0, void 0, void 0, function* () {
 //=======================Firebase Google Sign In=====================
 const googleSignIn = (firebaseToken) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        // Check if Firebase is initialized
+        if (!firebase_admin_1.default.apps.length) {
+            throw new AppError_1.default(http_status_1.default.SERVICE_UNAVAILABLE, "Firebase authentication is not configured");
+        }
         // Verify the Firebase ID token
         const decodedToken = yield firebase_admin_1.default.auth().verifyIdToken(firebaseToken);
         const { email, name, picture, uid: firebaseUid } = decodedToken;
