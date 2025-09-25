@@ -1,44 +1,36 @@
-import express from 'express';
-import { ItineraryController } from './itinerary.controller';
-import auth from '../../middlewares/auth';
-import validateRequest from '../../middlewares/validateRequest';
-import { itineraryValidation } from './itinerary.validation';
+import express from "express";
+import { ItineraryController } from "./itinerary.controller";
+import auth from "../../middlewares/auth";
+import validateRequest from "../../middlewares/validateRequest";
+import { itineraryValidation } from "./itinerary.validation";
 
 const router = express.Router();
 
 // Create itinerary
 router.post(
-  '/',
+  "/",
   auth,
   validateRequest(itineraryValidation.createItinerarySchema),
   ItineraryController.createItinerary
 );
 
 // Get itinerary by ID
-router.get(
-  '/:id',
+router.get("/:id", auth, ItineraryController.getItineraryById);
+
+// Add activity to itinerary
+router.post(
+  "/add-activity",
   auth,
-  ItineraryController.getItineraryById
+  validateRequest(itineraryValidation.addActivitySchema),
+  ItineraryController.addActivity
 );
 
 // Get all itineraries
-router.get(
-  '/',
-  auth,
-  ItineraryController.getAllItineraries
-);
-
-// Edit activity
-router.put(
-  '/edit-activity',
-  auth,
-  validateRequest(itineraryValidation.editActivitySchema),
-  ItineraryController.editActivity
-);
+router.get("/", auth, ItineraryController.getAllItineraries);
 
 // Update activity
-router.put(
-  '/update-activity',
+router.patch(
+  "/update-activity",
   auth,
   validateRequest(itineraryValidation.updateActivitySchema),
   ItineraryController.updateActivity

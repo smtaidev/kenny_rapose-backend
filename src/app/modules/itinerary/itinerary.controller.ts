@@ -1,68 +1,126 @@
-import { Response } from 'express';
-import { ItineraryService } from './itinerary.service';
-import catchAsync from '../../utils/catchAsync';
-import sendResponse from '../../utils/sendResponse';
-import { AuthRequest } from '../../middlewares/auth';
-import { IEditActivityRequest, IUpdateActivityRequest } from '../../interface/itinerary.interface';
+import { Response } from "express";
+import { ItineraryService } from "./itinerary.service";
+import catchAsync from "../../utils/catchAsync";
+import sendResponse from "../../utils/sendResponse";
+import { AuthRequest } from "../../middlewares/auth";
+import {
+  IUpdateActivityRequest,
+  IAddActivityRequest,
+} from "../../interface/itinerary.interface";
 
 const createItinerary = catchAsync(async (req: AuthRequest, res: Response) => {
   const payload = req.body;
-  
-  const result = await ItineraryService.createItinerary(payload);
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return sendResponse(res, {
+      statusCode: 401,
+      success: false,
+      message: "User not authenticated",
+      data: null,
+    });
+  }
+
+  const result = await ItineraryService.createItinerary(payload, userId);
 
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: 'Itinerary created successfully',
+    message: "Itinerary created successfully",
     data: result,
   });
 });
 
 const getItineraryById = catchAsync(async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
-  
-  const result = await ItineraryService.getItineraryById(id);
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return sendResponse(res, {
+      statusCode: 401,
+      success: false,
+      message: "User not authenticated",
+      data: null,
+    });
+  }
+
+  const result = await ItineraryService.getItineraryById(id, userId);
 
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: 'Itinerary retrieved successfully',
+    message: "Itinerary retrieved successfully",
     data: result,
   });
 });
 
-const getAllItineraries = catchAsync(async (req: AuthRequest, res: Response) => {
-  const result = await ItineraryService.getAllItineraries();
+const getAllItineraries = catchAsync(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user?.userId;
 
-  sendResponse(res, {
-    statusCode: 200,
-    success: true,
-    message: 'Itineraries retrieved successfully',
-    data: result,
-  });
-});
+    if (!userId) {
+      return sendResponse(res, {
+        statusCode: 401,
+        success: false,
+        message: "User not authenticated",
+        data: null,
+      });
+    }
 
-const editActivity = catchAsync(async (req: AuthRequest, res: Response) => {
-  const payload: IEditActivityRequest = req.body;
-  const result = await ItineraryService.editActivity(payload);
-  
-  sendResponse(res, {
-    statusCode: 200,
-    success: result.success,
-    message: result.message || 'Activity edit options generated successfully',
-    data: result.data,
-  });
-});
+    const result = await ItineraryService.getAllItineraries(userId);
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Itineraries retrieved successfully",
+      data: result,
+    });
+  }
+);
 
 const updateActivity = catchAsync(async (req: AuthRequest, res: Response) => {
   const payload: IUpdateActivityRequest = req.body;
-  const result = await ItineraryService.updateActivity(payload);
-  
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return sendResponse(res, {
+      statusCode: 401,
+      success: false,
+      message: "User not authenticated",
+      data: null,
+    });
+  }
+
+  const result = await ItineraryService.updateActivity(payload, userId);
+
   sendResponse(res, {
     statusCode: 200,
     success: result.success,
-    message: result.message || 'Activity updated successfully',
+    message: result.message || "Activity updated successfully",
     data: result.data,
+  });
+});
+
+const addActivity = catchAsync(async (req: AuthRequest, res: Response) => {
+  const payload: IAddActivityRequest = req.body;
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return sendResponse(res, {
+      statusCode: 401,
+      success: false,
+      message: "User not authenticated",
+      data: null,
+    });
+  }
+
+  const result = await ItineraryService.addActivity(payload, userId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Activity added successfully",
+    data: result,
   });
 });
 
@@ -70,6 +128,6 @@ export const ItineraryController = {
   createItinerary,
   getItineraryById,
   getAllItineraries,
-  editActivity,
   updateActivity,
+  addActivity,
 };

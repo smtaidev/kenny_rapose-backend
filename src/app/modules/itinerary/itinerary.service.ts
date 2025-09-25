@@ -1,20 +1,22 @@
-import httpStatus from 'http-status';
-import prisma from '../../utils/prisma';
-import { 
-  ICreateItinerary, 
-  IItineraryResponse, 
-  IAIRequest, 
-  IEditActivityRequest, 
-  IEditAIRequest, 
+import httpStatus from "http-status";
+import prisma from "../../utils/prisma";
+import {
+  ICreateItinerary,
+  IItineraryResponse,
+  IAIRequest,
   IUpdateActivityRequest,
+  IAddActivityRequest,
   IActivity,
-  IDay
-} from '../../interface/itinerary.interface';
-import { callAIEndpoint, callAIEditEndpoint } from '../../lib/aiService';
-import AppError from '../../errors/AppError';
-import { v4 as uuidv4 } from 'uuid';
+  IDay,
+} from "../../interface/itinerary.interface";
+import { callAIEndpoint } from "../../lib/aiService";
+import AppError from "../../errors/AppError";
+import { v4 as uuidv4 } from "uuid";
 
-const createItinerary = async (payload: ICreateItinerary): Promise<IItineraryResponse> => {
+const createItinerary = async (
+  payload: ICreateItinerary,
+  userId: string
+): Promise<IItineraryResponse> => {
   try {
     // Prepare user info for storage
     const userInfo = {
@@ -34,7 +36,8 @@ const createItinerary = async (payload: ICreateItinerary): Promise<IItineraryRes
     // Create itinerary record with PENDING status
     const itinerary = await prisma.itinerary.create({
       data: {
-        status: 'PENDING',
+        userId: userId,
+        status: "PENDING",
         userInfo: userInfo,
       },
     });
@@ -62,15 +65,15 @@ const createItinerary = async (payload: ICreateItinerary): Promise<IItineraryRes
       const failedItinerary = await prisma.itinerary.update({
         where: { id: itinerary.id },
         data: {
-          status: 'FAILED',
+          status: "FAILED",
         },
       });
 
       return {
         id: failedItinerary.id,
-        itinerary_id: '',
+        itinerary_id: "",
         days: [],
-        status: 'FAILED',
+        status: "FAILED",
         userInfo: userInfo,
         createdAt: failedItinerary.createdAt,
         updatedAt: failedItinerary.updatedAt,
@@ -96,7 +99,7 @@ const createItinerary = async (payload: ICreateItinerary): Promise<IItineraryRes
           days: processedDays,
           status: aiData.status,
         },
-        status: 'COMPLETED',
+        status: "COMPLETED",
       },
     });
 
@@ -104,27 +107,33 @@ const createItinerary = async (payload: ICreateItinerary): Promise<IItineraryRes
       id: updatedItinerary.id,
       itinerary_id: aiData.itinerary_id,
       days: processedDays,
-      status: 'COMPLETED',
+      status: "COMPLETED",
       userInfo: userInfo,
       createdAt: updatedItinerary.createdAt,
       updatedAt: updatedItinerary.updatedAt,
     };
   } catch (error: any) {
-    console.error('Itinerary creation error:', error);
+    console.error("Itinerary creation error:", error);
     throw new AppError(
       httpStatus.INTERNAL_SERVER_ERROR,
-      'Failed to create itinerary. Please try again.'
+      "Failed to create itinerary. Please try again."
     );
   }
 };
 
-const getItineraryById = async (id: string): Promise<IItineraryResponse> => {
-  const itinerary = await prisma.itinerary.findUnique({
-    where: { id },
+const getItineraryById = async (
+  id: string,
+  userId: string
+): Promise<IItineraryResponse> => {
+  const itinerary = await prisma.itinerary.findFirst({
+    where: {
+      id: id,
+      userId: userId,
+    },
   });
 
   if (!itinerary) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Itinerary not found');
+    throw new AppError(httpStatus.NOT_FOUND, "Itinerary not found");
   }
 
   const aiResponse = itinerary.aiResponse as any;
@@ -132,29 +141,32 @@ const getItineraryById = async (id: string): Promise<IItineraryResponse> => {
 
   return {
     id: itinerary.id,
-    itinerary_id: aiResponse?.itinerary_id || '',
+    itinerary_id: aiResponse?.itinerary_id || "",
     days: aiResponse?.days || [],
-    status: itinerary.status as 'PENDING' | 'COMPLETED' | 'FAILED',
+    status: itinerary.status as "PENDING" | "COMPLETED" | "FAILED",
     userInfo: userInfo || {},
     createdAt: itinerary.createdAt,
     updatedAt: itinerary.updatedAt,
   };
 };
 
-const getAllItineraries = async (): Promise<IItineraryResponse[]> => {
+const getAllItineraries = async (
+  userId: string
+): Promise<IItineraryResponse[]> => {
   const itineraries = await prisma.itinerary.findMany({
-    orderBy: { createdAt: 'desc' },
+    where: { userId: userId },
+    orderBy: { createdAt: "desc" },
   });
 
-  return itineraries.map(itinerary => {
+  return itineraries.map((itinerary) => {
     const aiResponse = itinerary.aiResponse as any;
     const userInfo = itinerary.userInfo as any;
 
     return {
       id: itinerary.id,
-      itinerary_id: aiResponse?.itinerary_id || '',
+      itinerary_id: aiResponse?.itinerary_id || "",
       days: aiResponse?.days || [],
-      status: itinerary.status as 'PENDING' | 'COMPLETED' | 'FAILED',
+      status: itinerary.status as "PENDING" | "COMPLETED" | "FAILED",
       userInfo: userInfo || {},
       createdAt: itinerary.createdAt,
       updatedAt: itinerary.updatedAt,
@@ -162,131 +174,68 @@ const getAllItineraries = async (): Promise<IItineraryResponse[]> => {
   });
 };
 
-const editActivity = async (payload: IEditActivityRequest) => {
+const updateActivity = async (
+  payload: IUpdateActivityRequest,
+  userId: string
+) => {
   try {
-    // Get itinerary from database
-    const itinerary = await prisma.itinerary.findUnique({
-      where: { id: payload.itinerary_id },
-    });
+    const { itinerary_id, activity_id, day_uuid, activity } = payload;
 
-    if (!itinerary) {
-      throw new AppError(httpStatus.NOT_FOUND, 'Itinerary not found');
-    }
-
-    if (!itinerary.aiResponse || !itinerary.userInfo) {
-      throw new AppError(httpStatus.BAD_REQUEST, 'Itinerary data is incomplete');
-    }
-
-    const aiResponse = itinerary.aiResponse as any;
-    const userInfo = itinerary.userInfo as any;
-
-    // Find the current activity
-    let currentActivity: IActivity | null = null;
-    let dayPlan: IActivity[] = [];
-
-    for (const day of aiResponse.days) {
-      const activity = day.activities.find((act: IActivity) => act.id === payload.activity_id);
-      if (activity) {
-        currentActivity = activity;
-        dayPlan = day.activities;
-        break;
-      }
-    }
-
-    if (!currentActivity) {
-      throw new AppError(httpStatus.NOT_FOUND, 'Activity not found');
-    }
-
-    // Prepare edit request for AI
-    const editRequest: IEditAIRequest = {
-      current_activity: currentActivity,
-      user_change: payload.user_change,
-      day_plan: dayPlan,
-      user_info: {
-        total_adults: userInfo.total_adults,
-        total_children: userInfo.total_children,
-        destination: userInfo.destination,
-        location: userInfo.location,
-        departure_date: userInfo.departure_date,
-        return_date: userInfo.return_date,
-        amenities: userInfo.amenities,
-        activities: userInfo.activities,
-        pacing: userInfo.pacing,
-        food: userInfo.food,
-        special_note: userInfo.special_note,
+    // Find the itinerary
+    const itinerary = await prisma.itinerary.findFirst({
+      where: {
+        id: itinerary_id,
+        userId: userId,
       },
-    };
-
-    // Call AI edit endpoint
-    const aiEditResponse = await callAIEditEndpoint(editRequest);
-
-    return {
-      success: aiEditResponse.success,
-      data: aiEditResponse.data,
-      message: aiEditResponse.message,
-    };
-  } catch (error: any) {
-    console.error('Edit activity error:', error);
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      'Failed to edit activity. Please try again.'
-    );
-  }
-};
-
-const updateActivity = async (payload: IUpdateActivityRequest) => {
-  try {
-    // Get itinerary from database
-    const itinerary = await prisma.itinerary.findUnique({
-      where: { id: payload.itinerary_id },
     });
 
     if (!itinerary) {
-      throw new AppError(httpStatus.NOT_FOUND, 'Itinerary not found');
+      throw new AppError(httpStatus.NOT_FOUND, "Itinerary not found");
     }
 
-    if (!itinerary.aiResponse) {
-      throw new AppError(httpStatus.BAD_REQUEST, 'Itinerary data is incomplete');
-    }
-
-    const aiResponse = itinerary.aiResponse as any;
-
-    // Find the selected option
-    const selectedOption = payload.alternative_options.find(
-      option => option.option === payload.selected_option
-    );
-
-    if (!selectedOption) {
-      throw new AppError(httpStatus.BAD_REQUEST, 'Selected option not found');
-    }
-
-    // Update the activity in the AI response
-    const updatedAiResponse = { ...aiResponse };
-    
-    for (const day of updatedAiResponse.days) {
-      const activityIndex = day.activities.findIndex(
-        (act: IActivity) => act.id === payload.activity_id
+    if (itinerary.status !== "COMPLETED") {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "Can only update activities in completed itineraries"
       );
-      
-      if (activityIndex !== -1) {
-        day.activities[activityIndex] = {
-          id: payload.activity_id,
-          time: selectedOption.time,
-          title: selectedOption.title,
-          description: selectedOption.description,
-          place: selectedOption.place,
-          keyword: selectedOption.keyword,
-        };
-        break;
-      }
     }
+
+    // Parse the current AI response
+    const currentAiResponse = itinerary.aiResponse as any;
+    if (!currentAiResponse || !currentAiResponse.days) {
+      throw new AppError(httpStatus.BAD_REQUEST, "Invalid itinerary data");
+    }
+
+    // Find the specific day
+    const dayIndex = currentAiResponse.days.findIndex(
+      (day: any) => day.day_uuid === day_uuid
+    );
+    if (dayIndex === -1) {
+      throw new AppError(httpStatus.NOT_FOUND, "Day not found in itinerary");
+    }
+
+    // Find the specific activity
+    const activityIndex = currentAiResponse.days[dayIndex].activities.findIndex(
+      (act: IActivity) => act.id === activity_id
+    );
+    if (activityIndex === -1) {
+      throw new AppError(httpStatus.NOT_FOUND, "Activity not found in day");
+    }
+
+    // Update the activity
+    const updatedAiResponse = { ...currentAiResponse };
+    updatedAiResponse.days[dayIndex].activities[activityIndex] = {
+      id: activity_id,
+      time: activity.time,
+      title: activity.title,
+      description: activity.description,
+      place: activity.place,
+      keyword: activity.keyword,
+    };
 
     // Update the itinerary in database
     const updatedItinerary = await prisma.itinerary.update({
-      where: { id: payload.itinerary_id },
+      where: { id: itinerary_id },
       data: {
         aiResponse: updatedAiResponse as any,
         updatedAt: new Date(),
@@ -295,23 +244,115 @@ const updateActivity = async (payload: IUpdateActivityRequest) => {
 
     return {
       success: true,
-      message: 'Activity updated successfully',
+      message: "Activity updated successfully",
       data: {
         id: updatedItinerary.id,
         aiResponse: updatedItinerary.aiResponse as any,
-        status: updatedItinerary.status as 'PENDING' | 'COMPLETED' | 'FAILED',
+        status: updatedItinerary.status as "PENDING" | "COMPLETED" | "FAILED",
         createdAt: updatedItinerary.createdAt,
         updatedAt: updatedItinerary.updatedAt,
       },
     };
   } catch (error: any) {
-    console.error('Update activity error:', error);
+    console.error("Update activity error:", error);
     if (error instanceof AppError) {
       throw error;
     }
     throw new AppError(
       httpStatus.INTERNAL_SERVER_ERROR,
-      'Failed to update activity. Please try again.'
+      "Failed to update activity. Please try again."
+    );
+  }
+};
+
+const addActivity = async (
+  payload: IAddActivityRequest,
+  userId: string
+): Promise<IItineraryResponse> => {
+  try {
+    const { itinerary_id, day_uuid, activity } = payload;
+
+    // Find the itinerary
+    const itinerary = await prisma.itinerary.findFirst({
+      where: {
+        id: itinerary_id,
+        userId: userId,
+      },
+    });
+
+    if (!itinerary) {
+      throw new AppError(httpStatus.NOT_FOUND, "Itinerary not found");
+    }
+
+    if (itinerary.status !== "COMPLETED") {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "Can only add activities to completed itineraries"
+      );
+    }
+
+    // Parse the current AI response
+    const currentAiResponse = itinerary.aiResponse as any;
+    if (!currentAiResponse || !currentAiResponse.days) {
+      throw new AppError(httpStatus.BAD_REQUEST, "Invalid itinerary data");
+    }
+
+    // Find the specific day
+    const dayIndex = currentAiResponse.days.findIndex(
+      (day: any) => day.day_uuid === day_uuid
+    );
+    if (dayIndex === -1) {
+      throw new AppError(httpStatus.NOT_FOUND, "Day not found in itinerary");
+    }
+
+    // Create new activity with unique ID
+    const newActivity: IActivity = {
+      id: uuidv4(),
+      time: activity.time,
+      title: activity.title,
+      description: activity.description,
+      place: activity.place,
+      keyword: activity.keyword,
+    };
+
+    // Add the new activity to the day
+    currentAiResponse.days[dayIndex].activities.push(newActivity);
+
+    // Sort activities by time (optional - you might want to keep user's order)
+    currentAiResponse.days[dayIndex].activities.sort(
+      (a: IActivity, b: IActivity) => {
+        const timeA = new Date(`2000-01-01 ${a.time}`);
+        const timeB = new Date(`2000-01-01 ${b.time}`);
+        return timeA.getTime() - timeB.getTime();
+      }
+    );
+
+    // Update the itinerary in database
+    const updatedItinerary = await prisma.itinerary.update({
+      where: { id: itinerary_id },
+      data: {
+        aiResponse: currentAiResponse,
+      },
+    });
+
+    // Return the updated itinerary
+    return {
+      id: updatedItinerary.id,
+      itinerary_id: currentAiResponse.itinerary_id,
+      days: currentAiResponse.days,
+      status: updatedItinerary.status as "PENDING" | "COMPLETED" | "FAILED",
+      userInfo: itinerary.userInfo as any,
+      createdAt: updatedItinerary.createdAt,
+      updatedAt: updatedItinerary.updatedAt,
+    };
+  } catch (error: any) {
+    console.error("Add activity error:", error);
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      "Failed to add activity. Please try again."
     );
   }
 };
@@ -320,6 +361,6 @@ export const ItineraryService = {
   createItinerary,
   getItineraryById,
   getAllItineraries,
-  editActivity,
   updateActivity,
+  addActivity,
 };

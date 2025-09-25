@@ -31,7 +31,7 @@ export interface IItineraryResponse {
   id: string;
   itinerary_id: string;
   days: IDay[];
-  status: 'PENDING' | 'COMPLETED' | 'FAILED';
+  status: "PENDING" | "COMPLETED" | "FAILED";
   userInfo: {
     total_adults: number;
     total_children: number;
@@ -117,13 +117,24 @@ export interface IEditAIResponse {
 export interface IUpdateActivityRequest {
   itinerary_id: string;
   activity_id: string;
-  selected_option: number;
-  alternative_options: Array<{
-    option: number;
+  day_uuid: string;
+  activity: {
     time: string;
     title: string;
     description: string;
     place: string;
     keyword: string;
-  }>;
+  };
+}
+
+export interface IAddActivityRequest {
+  itinerary_id: string;
+  day_uuid: string;
+  activity: {
+    time: string;
+    title: string;
+    description: string;
+    place: string;
+    keyword: string;
+  };
 }

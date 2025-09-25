@@ -50,6 +50,7 @@ model User {
   userActivities        UserActivity[]
   cancelRequests        CancelRequest[]
   cart                  Cart[]
+  itineraries           Itinerary[]
 
   @@map("users")
 }
@@ -251,11 +252,14 @@ model UserAssistance {
 
 model Itinerary {
   id              String          @id @default(uuid())
+  userId          String
   aiResponse      Json?
   userInfo        Json?
   status          ItineraryStatus @default(PENDING)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("itineraries")
 }
