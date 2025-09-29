@@ -138,3 +138,13 @@ export interface IAddActivityRequest {
     keyword: string;
   };
 }
+
+export interface IDeleteActivityRequest {
+  itinerary_id: string;
+  day_uuid: string;
+  activity_id: string;
+}
+
+export interface IDeleteItineraryRequest {
+  itinerary_id: string;
+}

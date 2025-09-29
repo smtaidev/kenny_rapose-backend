@@ -36,4 +36,20 @@ router.patch(
   ItineraryController.updateActivity
 );
 
+// Delete activity
+router.delete(
+  "/delete-activity",
+  auth,
+  validateRequest(itineraryValidation.deleteActivitySchema),
+  ItineraryController.deleteActivity
+);
+
+// Delete itinerary
+router.delete(
+  "/delete-itinerary",
+  auth,
+  validateRequest(itineraryValidation.deleteItinerarySchema),
+  ItineraryController.deleteItinerary
+);
+
 export const itineraryRouter = router;

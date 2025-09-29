@@ -6,6 +6,8 @@ import { AuthRequest } from "../../middlewares/auth";
 import {
   IUpdateActivityRequest,
   IAddActivityRequest,
+  IDeleteActivityRequest,
+  IDeleteItineraryRequest,
 } from "../../interface/itinerary.interface";
 
 const createItinerary = catchAsync(async (req: AuthRequest, res: Response) => {
@@ -124,10 +126,58 @@ const addActivity = catchAsync(async (req: AuthRequest, res: Response) => {
   });
 });
 
+const deleteActivity = catchAsync(async (req: AuthRequest, res: Response) => {
+  const payload: IDeleteActivityRequest = req.body;
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return sendResponse(res, {
+      statusCode: 401,
+      success: false,
+      message: "User not authenticated",
+      data: null,
+    });
+  }
+
+  const result = await ItineraryService.deleteActivity(payload, userId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Activity deleted successfully",
+    data: result,
+  });
+});
+
+const deleteItinerary = catchAsync(async (req: AuthRequest, res: Response) => {
+  const payload: IDeleteItineraryRequest = req.body;
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return sendResponse(res, {
+      statusCode: 401,
+      success: false,
+      message: "User not authenticated",
+      data: null,
+    });
+  }
+
+  const result = await ItineraryService.deleteItinerary(payload, userId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: result.success,
+    message: result.message,
+    data: null,
+  });
+});
+
 export const ItineraryController = {
   createItinerary,
   getItineraryById,
   getAllItineraries,
   updateActivity,
   addActivity,
+  deleteActivity,
+  deleteItinerary,
 };

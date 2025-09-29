@@ -6,6 +6,8 @@ import {
   IAIRequest,
   IUpdateActivityRequest,
   IAddActivityRequest,
+  IDeleteActivityRequest,
+  IDeleteItineraryRequest,
   IActivity,
   IDay,
 } from "../../interface/itinerary.interface";
@@ -357,10 +359,139 @@ const addActivity = async (
   }
 };
 
+const deleteActivity = async (
+  payload: IDeleteActivityRequest,
+  userId: string
+): Promise<IItineraryResponse> => {
+  try {
+    const { itinerary_id, day_uuid, activity_id } = payload;
+
+    // Find the itinerary and verify ownership
+    const itinerary = await prisma.itinerary.findFirst({
+      where: {
+        id: itinerary_id,
+        userId: userId,
+      },
+    });
+
+    if (!itinerary) {
+      throw new AppError(
+        httpStatus.NOT_FOUND,
+        "Itinerary not found or you don't have permission to access it"
+      );
+    }
+
+    // Parse the AI response to get the days
+    const aiResponse = itinerary.aiResponse as any;
+    if (!aiResponse || !aiResponse.days) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "Invalid itinerary data structure"
+      );
+    }
+
+    // Find the specific day
+    const dayIndex = aiResponse.days.findIndex(
+      (day: any) => day.day_uuid === day_uuid
+    );
+
+    if (dayIndex === -1) {
+      throw new AppError(httpStatus.NOT_FOUND, "Day not found in itinerary");
+    }
+
+    // Find the specific activity within the day
+    const activityIndex = aiResponse.days[dayIndex].activities.findIndex(
+      (activity: any) => activity.id === activity_id
+    );
+
+    if (activityIndex === -1) {
+      throw new AppError(
+        httpStatus.NOT_FOUND,
+        "Activity not found in the specified day"
+      );
+    }
+
+    // Remove the activity from the activities array
+    aiResponse.days[dayIndex].activities.splice(activityIndex, 1);
+
+    // Update the itinerary in the database
+    const updatedItinerary = await prisma.itinerary.update({
+      where: { id: itinerary_id },
+      data: {
+        aiResponse: aiResponse,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Return the updated itinerary
+    return {
+      id: updatedItinerary.id,
+      itinerary_id: aiResponse.itinerary_id || "",
+      days: aiResponse.days,
+      status: updatedItinerary.status as "PENDING" | "COMPLETED" | "FAILED",
+      userInfo: updatedItinerary.userInfo as any,
+      createdAt: updatedItinerary.createdAt,
+      updatedAt: updatedItinerary.updatedAt,
+    };
+  } catch (error: any) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      "Failed to delete activity. Please try again."
+    );
+  }
+};
+
+const deleteItinerary = async (
+  payload: IDeleteItineraryRequest,
+  userId: string
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    const { itinerary_id } = payload;
+
+    // Find the itinerary and verify ownership
+    const itinerary = await prisma.itinerary.findFirst({
+      where: {
+        id: itinerary_id,
+        userId: userId,
+      },
+    });
+
+    if (!itinerary) {
+      throw new AppError(
+        httpStatus.NOT_FOUND,
+        "Itinerary not found or you don't have permission to access it"
+      );
+    }
+
+    // Hard delete the itinerary from the database
+    await prisma.itinerary.delete({
+      where: { id: itinerary_id },
+    });
+
+    return {
+      success: true,
+      message: "Itinerary deleted successfully",
+    };
+  } catch (error: any) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      "Failed to delete itinerary. Please try again."
+    );
+  }
+};
+
 export const ItineraryService = {
   createItinerary,
   getItineraryById,
   getAllItineraries,
   updateActivity,
   addActivity,
+  deleteActivity,
+  deleteItinerary,
 };

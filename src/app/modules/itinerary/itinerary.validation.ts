@@ -76,8 +76,24 @@ const addActivitySchema = z.object({
   }),
 });
 
+const deleteActivitySchema = z.object({
+  body: z.object({
+    itinerary_id: z.string().uuid("Invalid itinerary ID format"),
+    day_uuid: z.string().min(1, "Day UUID is required"),
+    activity_id: z.string().min(1, "Activity ID is required"),
+  }),
+});
+
+const deleteItinerarySchema = z.object({
+  body: z.object({
+    itinerary_id: z.string().uuid("Invalid itinerary ID format"),
+  }),
+});
+
 export const itineraryValidation = {
   createItinerarySchema,
   updateActivitySchema,
   addActivitySchema,
+  deleteActivitySchema,
+  deleteItinerarySchema,
 };
