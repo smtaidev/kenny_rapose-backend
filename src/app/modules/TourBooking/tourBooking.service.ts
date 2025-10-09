@@ -1,10 +1,6 @@
-import prisma from "../../utils/prisma";
-import AppError from "../../errors/AppError";
 import httpStatus from "http-status";
-import {
-  ICreateTourBooking,
-  IUpdateTourBooking,
-} from "../../interface/tourBooking.interface";
+import AppError from "../../errors/AppError";
+import prisma from "../../utils/prisma";
 
 //=====================Get User Tour Bookings=====================
 const getUserTourBookings = async (userId: string, page = 1, limit = 20) => {

@@ -1,6 +1,6 @@
-import prisma from '../../utils/prisma';
-import AppError from '../../errors/AppError';
-import httpStatus from 'http-status';
+import prisma from "../../utils/prisma";
+import AppError from "../../errors/AppError";
+import httpStatus from "http-status";
 
 //=====================Get Tour Booking Statistics=====================
 const getTourBookingStats = async () => {
@@ -8,34 +8,34 @@ const getTourBookingStats = async () => {
   const totalBookings = await prisma.tourBooking.count({
     where: {
       payment: {
-        status: 'SUCCEEDED'
-      }
-    }
+        status: "SUCCEEDED",
+      },
+    },
   });
 
   // Get total revenue from successful tour bookings
   const revenueResult = await prisma.tourBooking.aggregate({
     where: {
       payment: {
-        status: 'SUCCEEDED'
-      }
+        status: "SUCCEEDED",
+      },
     },
     _sum: {
-      totalAmount: true
-    }
+      totalAmount: true,
+    },
   });
 
   // Get bookings by status
   const bookingsByStatus = await prisma.tourBooking.groupBy({
-    by: ['status'],
+    by: ["status"],
     _count: {
-      id: true
+      id: true,
     },
     where: {
       payment: {
-        status: 'SUCCEEDED'
-      }
-    }
+        status: "SUCCEEDED",
+      },
+    },
   });
 
   // Get recent bookings (last 30 days)
@@ -45,12 +45,12 @@ const getTourBookingStats = async () => {
   const recentBookings = await prisma.tourBooking.count({
     where: {
       payment: {
-        status: 'SUCCEEDED'
+        status: "SUCCEEDED",
       },
       createdAt: {
-        gte: thirtyDaysAgo
-      }
-    }
+        gte: thirtyDaysAgo,
+      },
+    },
   });
 
   // Get monthly breakdown (last 6 months)
@@ -58,24 +58,24 @@ const getTourBookingStats = async () => {
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
   const monthlyBreakdown = await prisma.tourBooking.groupBy({
-    by: ['createdAt'],
+    by: ["createdAt"],
     _count: {
-      id: true
+      id: true,
     },
     _sum: {
-      totalAmount: true
+      totalAmount: true,
     },
     where: {
       payment: {
-        status: 'SUCCEEDED'
+        status: "SUCCEEDED",
       },
       createdAt: {
-        gte: sixMonthsAgo
-      }
+        gte: sixMonthsAgo,
+      },
     },
     orderBy: {
-      createdAt: 'asc'
-    }
+      createdAt: "asc",
+    },
   });
 
   return {
@@ -86,11 +86,11 @@ const getTourBookingStats = async () => {
       acc[item.status] = item._count.id;
       return acc;
     }, {} as Record<string, number>),
-    monthlyBreakdown: monthlyBreakdown.map(item => ({
+    monthlyBreakdown: monthlyBreakdown.map((item) => ({
       month: item.createdAt.toISOString().substring(0, 7), // YYYY-MM format
       count: item._count.id,
-      revenue: item._sum.totalAmount || 0
-    }))
+      revenue: item._sum.totalAmount || 0,
+    })),
   };
 };
 
@@ -100,39 +100,39 @@ const getAiCreditStats = async () => {
   const totalPurchases = await prisma.creditPurchase.count({
     where: {
       payment: {
-        status: 'SUCCEEDED'
-      }
-    }
+        status: "SUCCEEDED",
+      },
+    },
   });
 
   // Get total revenue from AI credit purchases
   const revenueResult = await prisma.creditPurchase.aggregate({
     where: {
       payment: {
-        status: 'SUCCEEDED'
-      }
+        status: "SUCCEEDED",
+      },
     },
     _sum: {
-      amountPaid: true
-    }
+      amountPaid: true,
+    },
   });
 
   // Get total credits sold
   const totalCreditsSold = await prisma.creditPurchase.aggregate({
     where: {
       payment: {
-        status: 'SUCCEEDED'
-      }
+        status: "SUCCEEDED",
+      },
     },
     _sum: {
-      creditsPurchased: true
-    }
+      creditsPurchased: true,
+    },
   });
 
   return {
     totalPurchases,
     totalRevenue: revenueResult._sum.amountPaid || 0,
-    totalCreditsSold: totalCreditsSold._sum.creditsPurchased || 0
+    totalCreditsSold: totalCreditsSold._sum.creditsPurchased || 0,
   };
 };
 
@@ -142,62 +142,65 @@ const getWalletStats = async () => {
   const totalTopUps = await prisma.breezeWalletPurchase.count({
     where: {
       payment: {
-        status: 'SUCCEEDED'
-      }
-    }
+        status: "SUCCEEDED",
+      },
+    },
   });
 
   // Get total revenue from wallet top-ups
   const revenueResult = await prisma.breezeWalletPurchase.aggregate({
     where: {
       payment: {
-        status: 'SUCCEEDED'
-      }
+        status: "SUCCEEDED",
+      },
     },
     _sum: {
-      amountPaid: true
-    }
+      amountPaid: true,
+    },
   });
 
   // Get total wallet amount purchased
   const totalWalletAmount = await prisma.breezeWalletPurchase.aggregate({
     where: {
       payment: {
-        status: 'SUCCEEDED'
-      }
+        status: "SUCCEEDED",
+      },
     },
     _sum: {
-      amountPurchased: true
-    }
+      amountPurchased: true,
+    },
   });
 
   return {
     totalTopUps,
     totalRevenue: revenueResult._sum.amountPaid || 0,
-    totalWalletAmount: totalWalletAmount._sum.amountPurchased || 0
+    totalWalletAmount: totalWalletAmount._sum.amountPurchased || 0,
   };
 };
 
 //=====================Get Users by Country Statistics=====================
 const getUsersByCountry = async () => {
   const usersByCountry = await prisma.user.groupBy({
-    by: ['country'],
+    by: ["country"],
     _count: {
-      id: true
+      id: true,
     },
     where: {
       country: {
-        not: null
-      }
-    }
+        not: null,
+      },
+    },
   });
 
   const totalUsers = await prisma.user.count();
-  
-  return usersByCountry.map(item => ({
-    country: item.country || 'Unknown',
+
+  return usersByCountry.map((item) => ({
+    country: item.country || "Unknown",
     count: item._count.id,
-    percentage: totalUsers > 0 ? ((item._count.id / totalUsers) * 100).toFixed(2) : '0.00'
+    percentage:
+      totalUsers > 0
+        ? ((item._count.id / totalUsers) * 100).toFixed(2)
+        : "0.00",
   }));
 };
 
@@ -207,42 +210,42 @@ const getTourBookingsPerMonth = async () => {
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
   const monthlyBookings = await prisma.tourBooking.groupBy({
-    by: ['createdAt'],
+    by: ["createdAt"],
     _sum: {
-      totalAmount: true
+      totalAmount: true,
     },
     _count: {
-      id: true
+      id: true,
     },
     where: {
       payment: {
-        status: 'SUCCEEDED'
+        status: "SUCCEEDED",
       },
       createdAt: {
-        gte: sixMonthsAgo
-      }
+        gte: sixMonthsAgo,
+      },
     },
     orderBy: {
-      createdAt: 'asc'
-    }
+      createdAt: "asc",
+    },
   });
 
-  return monthlyBookings.map(item => ({
+  return monthlyBookings.map((item) => ({
     month: item.createdAt.toISOString().substring(0, 7), // YYYY-MM format
     amount: item._sum.totalAmount || 0,
-    count: item._count.id
+    count: item._count.id,
   }));
 };
 
 //=====================Get All Booked Tour Packages=====================
 const getAllBookedTourPackages = async (page = 1, limit = 20) => {
   const skip = (page - 1) * limit;
-  
+
   const [bookedPackages, totalCount] = await Promise.all([
     prisma.tourBooking.findMany({
       skip,
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: {
         tourPackage: {
           select: {
@@ -263,8 +266,8 @@ const getAllBookedTourPackages = async (page = 1, limit = 20) => {
             status: true,
             star: true,
             createdAt: true,
-            updatedAt: true
-          }
+            updatedAt: true,
+          },
         },
         user: {
           select: {
@@ -273,8 +276,8 @@ const getAllBookedTourPackages = async (page = 1, limit = 20) => {
             lastName: true,
             email: true,
             phone: true,
-            country: true
-          }
+            country: true,
+          },
         },
         payment: {
           select: {
@@ -283,12 +286,12 @@ const getAllBookedTourPackages = async (page = 1, limit = 20) => {
             currency: true,
             status: true,
             paymentIntentId: true,
-            createdAt: true
-          }
-        }
-      }
+            createdAt: true,
+          },
+        },
+      },
     }),
-    prisma.tourBooking.count()
+    prisma.tourBooking.count(),
   ]);
 
   return {
@@ -297,8 +300,8 @@ const getAllBookedTourPackages = async (page = 1, limit = 20) => {
       page,
       limit,
       total: totalCount,
-      totalPages: Math.ceil(totalCount / limit)
-    }
+      totalPages: Math.ceil(totalCount / limit),
+    },
   };
 };
 
@@ -310,54 +313,60 @@ const getDashboardStats = async () => {
   // Get total revenue from all sources
   const [tourRevenue, aiCreditRevenue, walletRevenue] = await Promise.all([
     prisma.tourBooking.aggregate({
-      where: { payment: { status: 'SUCCEEDED' } },
-      _sum: { totalAmount: true }
+      where: { payment: { status: "SUCCEEDED" } },
+      _sum: { totalAmount: true },
     }),
     prisma.creditPurchase.aggregate({
-      where: { payment: { status: 'SUCCEEDED' } },
-      _sum: { amountPaid: true }
+      where: { payment: { status: "SUCCEEDED" } },
+      _sum: { amountPaid: true },
     }),
     prisma.breezeWalletPurchase.aggregate({
-      where: { payment: { status: 'SUCCEEDED' } },
-      _sum: { amountPaid: true }
-    })
+      where: { payment: { status: "SUCCEEDED" } },
+      _sum: { amountPaid: true },
+    }),
   ]);
 
-  const totalRevenue = (tourRevenue._sum.totalAmount || 0) + 
-                     (aiCreditRevenue._sum.amountPaid || 0) + 
-                     (walletRevenue._sum.amountPaid || 0);
+  const totalRevenue =
+    (tourRevenue._sum.totalAmount || 0) +
+    (aiCreditRevenue._sum.amountPaid || 0) +
+    (walletRevenue._sum.amountPaid || 0);
 
   // Get last 30 days revenue
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const [last30DaysTourRevenue, last30DaysAiCreditRevenue, last30DaysWalletRevenue] = await Promise.all([
+  const [
+    last30DaysTourRevenue,
+    last30DaysAiCreditRevenue,
+    last30DaysWalletRevenue,
+  ] = await Promise.all([
     prisma.tourBooking.aggregate({
-      where: { 
-        payment: { status: 'SUCCEEDED' },
-        createdAt: { gte: thirtyDaysAgo }
+      where: {
+        payment: { status: "SUCCEEDED" },
+        createdAt: { gte: thirtyDaysAgo },
       },
-      _sum: { totalAmount: true }
+      _sum: { totalAmount: true },
     }),
     prisma.creditPurchase.aggregate({
-      where: { 
-        payment: { status: 'SUCCEEDED' },
-        createdAt: { gte: thirtyDaysAgo }
+      where: {
+        payment: { status: "SUCCEEDED" },
+        createdAt: { gte: thirtyDaysAgo },
       },
-      _sum: { amountPaid: true }
+      _sum: { amountPaid: true },
     }),
     prisma.breezeWalletPurchase.aggregate({
-      where: { 
-        payment: { status: 'SUCCEEDED' },
-        createdAt: { gte: thirtyDaysAgo }
+      where: {
+        payment: { status: "SUCCEEDED" },
+        createdAt: { gte: thirtyDaysAgo },
       },
-      _sum: { amountPaid: true }
-    })
+      _sum: { amountPaid: true },
+    }),
   ]);
 
-  const last30DaysRevenue = (last30DaysTourRevenue._sum.totalAmount || 0) + 
-                          (last30DaysAiCreditRevenue._sum.amountPaid || 0) + 
-                          (last30DaysWalletRevenue._sum.amountPaid || 0);
+  const last30DaysRevenue =
+    (last30DaysTourRevenue._sum.totalAmount || 0) +
+    (last30DaysAiCreditRevenue._sum.amountPaid || 0) +
+    (last30DaysWalletRevenue._sum.amountPaid || 0);
 
   // Get amounts for each category
   const totalTourBookingsAmount = tourRevenue._sum.totalAmount || 0;
@@ -367,7 +376,7 @@ const getDashboardStats = async () => {
   // Get additional analytics
   const [usersByCountry, tourBookingsPerMonth] = await Promise.all([
     getUsersByCountry(),
-    getTourBookingsPerMonth()
+    getTourBookingsPerMonth(),
   ]);
 
   return {
@@ -377,22 +386,22 @@ const getDashboardStats = async () => {
       last30DaysRevenue,
       totalTourBookings: totalTourBookingsAmount,
       totalAiCreditPurchases: totalAiCreditPurchasesAmount,
-      totalWalletTopUps: totalWalletTopUpsAmount
+      totalWalletTopUps: totalWalletTopUpsAmount,
     },
     usersByCountry,
-    tourBookingsPerMonth
+    tourBookingsPerMonth,
   };
 };
 
 //=====================Get Tour Package Analytics=====================
 const getTourPackageAnalytics = async (page = 1, limit = 10) => {
   const skip = (page - 1) * limit;
-  
+
   const [tourPackages, totalCount] = await Promise.all([
     prisma.tourPackage.findMany({
       skip,
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       // Remove the deletedAt filter to show all packages including deleted ones
       include: {
         tourBookings: {
@@ -402,19 +411,19 @@ const getTourPackageAnalytics = async (page = 1, limit = 10) => {
         },
       },
     }),
-    prisma.tourPackage.count()
+    prisma.tourPackage.count(),
   ]);
 
   const analytics = tourPackages.map((tourPackage) => {
     const bookings = tourPackage.tourBookings;
-    
+
     // Calculate total bookings by status
     const statusCounts = {
-      confirmed: bookings.filter(b => b.status === 'CONFIRMED').length,
-      pending: bookings.filter(b => b.status === 'PENDING').length,
-      cancelled: bookings.filter(b => b.status === 'CANCELLED').length,
-      completed: bookings.filter(b => b.status === 'COMPLETED').length,
-      refunded: bookings.filter(b => b.status === 'REFUNDED').length,
+      confirmed: bookings.filter((b) => b.status === "CONFIRMED").length,
+      pending: bookings.filter((b) => b.status === "PENDING").length,
+      cancelled: bookings.filter((b) => b.status === "CANCELLED").length,
+      completed: bookings.filter((b) => b.status === "COMPLETED").length,
+      refunded: bookings.filter((b) => b.status === "REFUNDED").length,
     };
 
     // Calculate total people booked
@@ -425,15 +434,15 @@ const getTourPackageAnalytics = async (page = 1, limit = 10) => {
     };
 
     // Calculate earnings
-    const confirmedBookings = bookings.filter(b => b.status === 'CONFIRMED');
-    const pendingBookings = bookings.filter(b => b.status === 'PENDING');
-    
+    const confirmedBookings = bookings.filter((b) => b.status === "CONFIRMED");
+    const pendingBookings = bookings.filter((b) => b.status === "PENDING");
+
     const totalEarnings = confirmedBookings.reduce((sum, b) => {
-      return sum + (b.payment?.status === 'SUCCEEDED' ? b.totalAmount : 0);
+      return sum + (b.payment?.status === "SUCCEEDED" ? b.totalAmount : 0);
     }, 0);
 
     const pendingAmount = pendingBookings.reduce((sum, b) => {
-      return sum + (b.payment?.status === 'PENDING' ? b.totalAmount : 0);
+      return sum + (b.payment?.status === "PENDING" ? b.totalAmount : 0);
     }, 0);
 
     // Calculate potential revenue based on pricing
@@ -446,7 +455,10 @@ const getTourPackageAnalytics = async (page = 1, limit = 10) => {
     return {
       packageId: tourPackage.id,
       title: tourPackage.packageName,
-      image: tourPackage.photos && tourPackage.photos.length > 0 ? tourPackage.photos[0] : null,
+      image:
+        tourPackage.photos && tourPackage.photos.length > 0
+          ? tourPackage.photos[0]
+          : null,
       currentStatus: tourPackage.status, // ACTIVE or INACTIVE
       isDeleted: tourPackage.deletedAt !== null, // Show if package is deleted
       deletedAt: tourPackage.deletedAt, // Show deletion date if deleted
@@ -475,13 +487,25 @@ const getTourPackageAnalytics = async (page = 1, limit = 10) => {
   });
 
   // Determine project current status based on business logic
-  const activePackages = analytics.filter(pkg => pkg.currentStatus === 'ACTIVE' && !pkg.isDeleted).length;
-  const deletedPackages = analytics.filter(pkg => pkg.isDeleted).length;
-  const totalBookings = analytics.reduce((sum, pkg) => sum + pkg.totalBookings.adults + pkg.totalBookings.children + pkg.totalBookings.infants, 0);
-  const totalEarnings = analytics.reduce((sum, pkg) => sum + pkg.totalEarnings, 0);
-  
+  const activePackages = analytics.filter(
+    (pkg) => pkg.currentStatus === "ACTIVE" && !pkg.isDeleted
+  ).length;
+  const deletedPackages = analytics.filter((pkg) => pkg.isDeleted).length;
+  const totalBookings = analytics.reduce(
+    (sum, pkg) =>
+      sum +
+      pkg.totalBookings.adults +
+      pkg.totalBookings.children +
+      pkg.totalBookings.infants,
+    0
+  );
+  const totalEarnings = analytics.reduce(
+    (sum, pkg) => sum + pkg.totalEarnings,
+    0
+  );
+
   let projectCurrentStatus = "ACTIVE";
-  
+
   // Business logic to determine project status
   if (analytics.length === 0) {
     projectCurrentStatus = "INACTIVE"; // No packages available
@@ -498,7 +522,10 @@ const getTourPackageAnalytics = async (page = 1, limit = 10) => {
     totalPackages: analytics.length,
     totalBookings: totalBookings,
     totalEarnings: totalEarnings,
-    totalPendingAmount: analytics.reduce((sum, pkg) => sum + pkg.pendingAmount, 0),
+    totalPendingAmount: analytics.reduce(
+      (sum, pkg) => sum + pkg.pendingAmount,
+      0
+    ),
     projectCurrentStatus: projectCurrentStatus,
   };
 
@@ -518,11 +545,16 @@ const getTourPackageAnalytics = async (page = 1, limit = 10) => {
 
 //=====================Get Cancel Request Statistics=====================
 const getCancelRequestStats = async () => {
-  const [totalCancelRequests, pendingRequests, approvedRequests, rejectedRequests] = await Promise.all([
+  const [
+    totalCancelRequests,
+    pendingRequests,
+    approvedRequests,
+    rejectedRequests,
+  ] = await Promise.all([
     prisma.cancelRequest.count(),
-    prisma.cancelRequest.count({ where: { status: 'PENDING' } }),
-    prisma.cancelRequest.count({ where: { status: 'APPROVED' } }),
-    prisma.cancelRequest.count({ where: { status: 'REJECTED' } }),
+    prisma.cancelRequest.count({ where: { status: "PENDING" } }),
+    prisma.cancelRequest.count({ where: { status: "APPROVED" } }),
+    prisma.cancelRequest.count({ where: { status: "REJECTED" } }),
   ]);
 
   // Get recent cancel requests (last 30 days)
@@ -532,9 +564,9 @@ const getCancelRequestStats = async () => {
   const recentCancelRequests = await prisma.cancelRequest.count({
     where: {
       createdAt: {
-        gte: thirtyDaysAgo
-      }
-    }
+        gte: thirtyDaysAgo,
+      },
+    },
   });
 
   return {
@@ -547,9 +579,13 @@ const getCancelRequestStats = async () => {
 };
 
 //=====================Get All Cancel Requests with Details=====================
-const getAllCancelRequestsWithDetails = async (page = 1, limit = 20, status?: string) => {
+const getAllCancelRequestsWithDetails = async (
+  page = 1,
+  limit = 20,
+  status?: string
+) => {
   const skip = (page - 1) * limit;
-  
+
   const whereClause: any = {};
   if (status) {
     whereClause.status = status;
@@ -560,13 +596,15 @@ const getAllCancelRequestsWithDetails = async (page = 1, limit = 20, status?: st
       where: whereClause,
       skip,
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: {
         user: {
           select: {
             id: true,
             firstName: true,
             lastName: true,
+            profilePhoto: true,
+            travelerNumber: true,
             email: true,
             phone: true,
             country: true,
@@ -623,23 +661,26 @@ const softDeleteUserById = async (userId: string) => {
   });
 
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found or already deleted');
+    throw new AppError(
+      httpStatus.NOT_FOUND,
+      "User not found or already deleted"
+    );
   }
 
   // Soft delete the user
   await prisma.user.update({
     where: { id: userId },
-    data: { 
+    data: {
       isActive: false,
       isDeleted: true,
       deletedAt: new Date(),
     },
   });
 
-  return { 
-    message: 'User soft deleted successfully',
+  return {
+    message: "User soft deleted successfully",
     userId: userId,
-    deletedAt: new Date()
+    deletedAt: new Date(),
   };
 };
 
