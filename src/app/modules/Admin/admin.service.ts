@@ -598,7 +598,18 @@ const getAllCancelRequestsWithDetails = async (
       take: limit,
       orderBy: { createdAt: "desc" },
       include: {
-        user: true,
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            profilePhoto: true,
+            travelerNumber: true,
+            phone: true,
+            country: true,
+          },
+        },
         tourBooking: {
           include: {
             tourPackage: {

@@ -1,18 +1,25 @@
-import prisma from '../../utils/prisma';
-import AppError from '../../errors/AppError';
-import httpStatus from 'http-status';
-import { ICreateCancelRequest, IUpdateCancelRequestStatus, ICancelRequestFilters } from '../../interface/cancelRequest.interface';
+import prisma from "../../utils/prisma";
+import AppError from "../../errors/AppError";
+import httpStatus from "http-status";
+import {
+  ICreateCancelRequest,
+  IUpdateCancelRequestStatus,
+  ICancelRequestFilters,
+} from "../../interface/cancelRequest.interface";
 
 //=====================Create Cancel Request=====================
-const createCancelRequest = async (userId: string, data: ICreateCancelRequest) => {
+const createCancelRequest = async (
+  userId: string,
+  data: ICreateCancelRequest
+) => {
   const { tourBookingId } = data;
 
   // Check if tour booking exists and belongs to user
   const tourBooking = await prisma.tourBooking.findFirst({
-    where: { 
-      id: tourBookingId, 
+    where: {
+      id: tourBookingId,
       userId,
-      status: 'CONFIRMED' // Only confirmed bookings can be cancelled
+      status: "CONFIRMED", // Only confirmed bookings can be cancelled
     },
     include: {
       tourPackage: {
@@ -25,19 +32,25 @@ const createCancelRequest = async (userId: string, data: ICreateCancelRequest) =
   });
 
   if (!tourBooking) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Confirmed tour booking not found');
+    throw new AppError(
+      httpStatus.NOT_FOUND,
+      "Confirmed tour booking not found"
+    );
   }
 
   // Check if cancel request already exists
   const existingCancelRequest = await prisma.cancelRequest.findFirst({
-    where: { 
+    where: {
       tourBookingId,
-      status: 'PENDING'
+      status: "PENDING",
     },
   });
 
   if (existingCancelRequest) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Cancel request already exists for this booking');
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Cancel request already exists for this booking"
+    );
   }
 
   // Create cancel request and update tour booking status
@@ -47,14 +60,14 @@ const createCancelRequest = async (userId: string, data: ICreateCancelRequest) =
       data: {
         userId,
         tourBookingId,
-        status: 'PENDING',
+        status: "PENDING",
       },
     });
 
     // Update tour booking cancel request status
     await tx.tourBooking.update({
       where: { id: tourBookingId },
-      data: { cancelRequestStatus: 'PENDING' },
+      data: { cancelRequestStatus: "PENDING" },
     });
 
     return cancelRequest;
@@ -84,7 +97,7 @@ const getAllCancelRequests = async (filters: ICancelRequestFilters) => {
   const [cancelRequests, totalCount] = await Promise.all([
     prisma.cancelRequest.findMany({
       where: whereClause,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       skip,
       take: limit,
       include: {
@@ -94,6 +107,10 @@ const getAllCancelRequests = async (filters: ICancelRequestFilters) => {
             firstName: true,
             lastName: true,
             email: true,
+            profilePhoto: true,
+            travelerNumber: true,
+            phone: true,
+            country: true,
           },
         },
         tourBooking: {
@@ -126,7 +143,10 @@ const getAllCancelRequests = async (filters: ICancelRequestFilters) => {
 };
 
 //=====================Update Cancel Request Status (Admin)=====================
-const updateCancelRequestStatus = async (cancelRequestId: string, data: IUpdateCancelRequestStatus) => {
+const updateCancelRequestStatus = async (
+  cancelRequestId: string,
+  data: IUpdateCancelRequestStatus
+) => {
   const { status } = data;
 
   // Check if cancel request exists
@@ -149,11 +169,14 @@ const updateCancelRequestStatus = async (cancelRequestId: string, data: IUpdateC
   });
 
   if (!cancelRequest) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Cancel request not found');
+    throw new AppError(httpStatus.NOT_FOUND, "Cancel request not found");
   }
 
-  if (cancelRequest.status !== 'PENDING') {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Only pending cancel requests can be updated');
+  if (cancelRequest.status !== "PENDING") {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Only pending cancel requests can be updated"
+    );
   }
 
   // Update cancel request and tour booking status
